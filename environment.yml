@@ -1,0 +1,21 @@
+name: Urban-SETP
+
+channels:
+  - conda-forge
+  - defaults
+  - conda-forge/label/dev
+
+dependencies:
+  - python>=3.7
+  - numpy
+  - pandas
+  - geopandas
+  - xlrd
+  - tqdm
+  - git
+  - git-lfs
+  - jupyterlab
+  - matplotlib
+  - seaborn
+  - nodejs
+  - git-bash
