@@ -37,12 +37,6 @@ class SurgeSeries:
     def __str__(self): #this is what you see if you say "print(object)"
         return self.name + " " + self.description + "\n" +  str(list(zip(self.years,self.surgelevel)))
     
-#Initiate classes of the model (~make the type of lego Blocks)
-
-#class IterRegistry(type): #Keep track of all the instances of the different classes that were created
-#    def __iter__(cls):
-#        return iter(cls._registry)
-
 allFloodProtection = [] #List with all the flood protection objects relevant for the city
 allResidentialArea = [] #List of all the residential areas in the city
 
@@ -61,9 +55,14 @@ class FloodProtection:
         self.barrier = moveable
         allFloodProtection.append(self) #Add to the overview of all flood protection objects
         
-    def update_protection_level(self,increase):
-        """Update a flood protection level object with some meters"""
-        self.protection_level = self.protection_level + increase
+    #def update_protection_level(self,increase):
+    #    """Update a flood protection level object with some meters"""
+    #    self.protection_level = self.protection_level + increase
+        
+    def update_protection_level(self,SurgeSeries,start,end,newvalue):
+        "Update the flood protection level for a certain SurgeSeries (experiment) from start to end timestep with a new value"
+        self.protection_level[SurgeSeries][start:end] = [newvalue] * (end-start)
+        
         
     def reset_protection_level(self):
         "Reset the flood protection level to the level when it was initiated"
@@ -97,7 +96,17 @@ class ResidentialArea():
 class Major:
     def __init__(self,name):
         self.name = name
+
+allMeasure = []
+class Measure():
+    def __init__(self,name,increase,lead_time):
+        self.name = name
+        self.increase = increase #the increase in height of the flood protection measure in m
+        self.lead_time = lead_time
         
+        allMeasure.append(self)
+    
+    
 def evaluate_event(water_level_difference,alarming_conditions,report):
     """Returns a decrease in trust for a given difference between flood protection and observed storm surge level
     Inputs:
