@@ -93,7 +93,7 @@ class ResidentialArea():
     def __str__(self): #this is what you see if you say "print(object)" #readable
         return self.__dict__
 
-class Major:
+class Mayor:
     def __init__(self,name):
         self.name = name
 
