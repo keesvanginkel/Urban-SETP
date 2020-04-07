@@ -14,7 +14,8 @@ class Model():
     def __init__(self,name):
         self.name = name
         self.allFloodProtection = [] #List with all the flood protection objects relevant for the city
-        self.allResidentialArea = [] #list with all the residentail areas in the city
+        self.allResidentialArea = [] #list with all the residential areas in the city
+        self.allMeasures = [] #list with all possible flood protection measures
         self.Parameters = {} #Dict containing all model parameters
         
     def add_FloodProtection(self,FloodProtection): #Add flood protection object to model
@@ -22,6 +23,12 @@ class Model():
     
     def add_ResidentialArea(self,ResidentialArea): #Add residential area to model
         self.allResidentialArea.append(ResidentialArea)
+        
+    def add_Measure_FloodProtection(self,Measure_FloodProtection):
+        self.allMeasures.append(Measure_FloodProtection)
+        
+    def add_Measure_ResidentialArea(self,Measure_ResidentialArea):
+        self.allMeasures.append(Measure_ResidentialArea)
         
     def add_Parameter(self,parameter_name,parameter_value): #Add parameter to the dict containing all parameters
         self.Parameters[parameter_name] = parameter_value
@@ -100,15 +107,23 @@ class FloodProtection:
         self.protection_level = baseline_level #initial level of flood protection
         self.barrier = moveable
         self.description = description
+        self.underconstruction = 0
         
-    def update_protection_level(self,start,end,newvalue):
+    def update_protection_level(self,start,end,newvalue,lead_time):
         "Update the flood protection level  from start to end timestep with a new value"
         self.protection_level[start:end] = [newvalue] * (end-start)
         
-        
+        "Indicate that the Flood Protection object is currently under construction for n years"
+        self.underconstruction = lead_time
+         
     def reset_protection_level(self):
         "Reset the flood protection level to the level when it was initiated"
         self.protection_level = self.baseline_level
+        
+    def construction_progress(self):
+        "Withdraw from the construction time"
+        if self.underconstruction > 0:
+            self.underconstruction = self.underconstruction - 1
     
     def __repr__(self):
         return self.name + int(self.baseline_level) + self.protection_level + self.barrier + self.description
@@ -119,18 +134,43 @@ class FloodProtection:
 class ResidentialArea():
     #trust_0 = 70 #initial trust of citizens, same for all residential areas
     
-    def __init__(self,name,elevation,protected_by,description=None,trust_0=70):
+    def __init__(self,name,elevation,surface_area,dam_pars,protected_by,description=None,trust_0=70):
         self.name = name #Name of the object (string)
         self.elevation = elevation #Elevation of the Residential Area in m
+        self.surface_area = surface_area #Surface area in km2
+        self.dam_pars = dam_pars #Parameters for the depth-damage calculation in the area
         self.protected_by = protected_by #Names of the FloodProtection objects it is protected by
         self.description = description
         self.trust_0 = trust_0
+    
+    def init_time(self,time): #If the model is run over time, initialise lists to store the results for the variables of interest
+        self.trust_t = [None] * len(time)
+        self.trust_t[0] = self.trust_0 #set initial condition
+        self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
+        self.flood_history = [None] * len(time)
     
     def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
             for j in self.protected_by: #Iterate over the structures the area is protected by (for now only one! -> later expand and make decision rules if multiple exist)
                 if i.name == j:
                     self.protection_level = i.protection_level
+  
+    def calculate_damage(self,inundation):
+        """
+        Calculate flood damage for a residential area
+
+        Input:
+            *self.dam_pars* (tuple) : (MaxDamage_Residential,depth,dam_frac) describing damage functions
+                                  euro/m2            m      (-)
+            *inundation* (float) : Inundation depth in m
+            *surface_area* (float) : Surface area of the region in km2
+
+        Returns:
+            *damage* (float) : damage to the area in 2010-Euros
+        """
+        dam_fraction = np.interp(inundation,self.dam_pars[1],self.dam_pars[2]) #fraction of max damage
+        max_damage = self.dam_pars[0]
+        return int(round(max_damage * 10**6 * self.surface_area * dam_fraction))
                     
     def __repr__(self): #this is wat you see if you say "object" (without printing)
         return self.name + " Elevation: " + str(self.elevation) + "\n Protected by: " + str(self.protected_by)
@@ -140,13 +180,22 @@ class ResidentialArea():
 
 
 class Measure():
-    def __init__(self,name,increase,lead_time):
+    def __init__(self,name,lead_time):
         self.name = name
-        self.increase = increase #the increase in height of the flood protection measure in m
         self.lead_time = lead_time
         
-        allMeasure.append(self)
-    
+    def __repr__(self):
+        return self.name + " " + str(self.lead_time) + " " + str(self.heightening)
+        
+class Measure_FloodProtection(Measure):
+    def __init__(self,name,lead_time,heightening):
+        super().__init__(name,lead_time)
+        self.heightening = heightening
+        
+class Measure_ResidentialArea(Measure):
+    def __init__(self,name,lead_time,heightening):
+        super().__init__(name,lead_time)
+        self.heightening = heightening
     
 def evaluate_event(water_level_difference,alarming_conditions,report):
     """Returns a decrease in trust for a given difference between flood protection and observed storm surge level
