@@ -1,6 +1,53 @@
 import csv
 import numpy as np
 import os
+from abc import ABC, abstractmethod
+
+
+#TRACK THE OBJECTS THAT WERE INITIATED
+allMeasure = []
+allSurgeSeries = []   
+#allFloodProtection = [] #List with all the flood protection objects relevant for the city
+#allResidentialArea = [] #List of all the residential areas in the city
+
+class Model():
+    def __init__(self,name):
+        self.name = name
+        self.allFloodProtection = [] #List with all the flood protection objects relevant for the city
+        self.allResidentialArea = [] #list with all the residentail areas in the city
+        self.Parameters = {} #Dict containing all model parameters
+        
+    def add_FloodProtection(self,FloodProtection): #Add flood protection object to model
+        self.allFloodProtection.append(FloodProtection)
+    
+    def add_ResidentialArea(self,ResidentialArea): #Add residential area to model
+        self.allResidentialArea.append(ResidentialArea)
+        
+    def add_Parameter(self,parameter_name,parameter_value): #Add parameter to the dict containing all parameters
+        self.Parameters[parameter_name] = parameter_value
+    
+    def __repr__(self):
+        name = self.name
+        FP_string = "allFloodProtection: \n" + "".join(str(x.name) + " " + str(x.baseline_level) + "; " for x in self.allFloodProtection)
+        RA_string = "allResidentialArea: \n" + "".join((str(x.name) + " Protected by:" + str(x.protected_by) + "\n") for x in self.allResidentialArea)
+        par_string = "Parameters : \n" + str(self.Parameters)
+        return "{} \n-----------\n{} \n-----------\n{}\n{}".format(name,FP_string,RA_string,par_string)
+    
+    def __str__(self):
+        return "Model: {} \nFloodProtection objects: {} \nResidentialAreas: {}".format(
+            self.name, 
+            "".join(str(x.name) + "; " for x in self.allFloodProtection), 
+            "".join(str(x.name) + "; " for x in self.allResidentialArea))
+        
+class Mayor(ABC): #is subclass of ABC (abstract base class)
+    @abstractmethod #in te vullen door subclasses (verplicht!)
+    def apply_strategy(self,Model,SurgeSeries,i,time):
+        pass
+    
+    @abstractmethod
+    def get_name(self):
+        pass
+        
 
 class SurgeSeries:
     "Common class for all storm surge series"
@@ -31,14 +78,13 @@ class SurgeSeries:
         self.years = [int(i) for i in years]
         self.surgelevel = [float(i) for i in surgelevel] #convert strings to floats
         
-    def __repr__(self): #this is wat you see if you say "object" (without printing)
+    def __repr__(self): #this is wat you see if you say "object" (without printing) meant to be detailed
         return self.name + " " + self.description + "\n" + str(list(zip(self.years,self.surgelevel)))
         
-    def __str__(self): #this is what you see if you say "print(object)"
+    def __str__(self): #this is what you see if you say "print(object)" meant to be simple
         return self.name + " " + self.description + "\n" +  str(list(zip(self.years,self.surgelevel)))
-    
-allFloodProtection = [] #List with all the flood protection objects relevant for the city
-allResidentialArea = [] #List of all the residential areas in the city
+
+
 
 class FloodProtection:
     """
@@ -48,40 +94,39 @@ class FloodProtection:
      - Moveable barrier?
     """
     
-    def __init__(self,name,baseline_level,moveable):
+    def __init__(self,name,baseline_level,moveable,description=None):
         self.name = name #Name of the flood protection object (string)
         self.baseline_level = baseline_level #initial level of flood protection
         self.protection_level = baseline_level #initial level of flood protection
         self.barrier = moveable
-        allFloodProtection.append(self) #Add to the overview of all flood protection objects
+        self.description = description
         
-    #def update_protection_level(self,increase):
-    #    """Update a flood protection level object with some meters"""
-    #    self.protection_level = self.protection_level + increase
-        
-    def update_protection_level(self,SurgeSeries,start,end,newvalue):
-        "Update the flood protection level for a certain SurgeSeries (experiment) from start to end timestep with a new value"
-        self.protection_level[SurgeSeries][start:end] = [newvalue] * (end-start)
+    def update_protection_level(self,start,end,newvalue):
+        "Update the flood protection level  from start to end timestep with a new value"
+        self.protection_level[start:end] = [newvalue] * (end-start)
         
         
     def reset_protection_level(self):
         "Reset the flood protection level to the level when it was initiated"
         self.protection_level = self.baseline_level
     
+    def __repr__(self):
+        return self.name + int(self.baseline_level) + self.protection_level + self.barrier + self.description
+    
     def __str__(self): #this is what you see if you say "print(object)"
         return self.name + str(self.protection_level)
 
 class ResidentialArea():
-    trust_0 = 70 #initial trust of citizens, same for all residential areas
+    #trust_0 = 70 #initial trust of citizens, same for all residential areas
     
-    def __init__(self,name,elevation,protected_by):
+    def __init__(self,name,elevation,protected_by,description=None,trust_0=70):
         self.name = name #Name of the object (string)
         self.elevation = elevation #Elevation of the Residential Area in m
         self.protected_by = protected_by #Names of the FloodProtection objects it is protected by
-        
-        allResidentialArea.append(self) #Add to the overview of all flood protection objects
+        self.description = description
+        self.trust_0 = trust_0
     
-    def match_with_FloodProtection(self): #TODO Make sure that it does not add it two times!
+    def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
             for j in self.protected_by: #Iterate over the structures the area is protected by (for now only one! -> later expand and make decision rules if multiple exist)
                 if i.name == j:
@@ -93,11 +138,7 @@ class ResidentialArea():
     def __str__(self): #this is what you see if you say "print(object)" #readable
         return self.__dict__
 
-class Mayor:
-    def __init__(self,name):
-        self.name = name
 
-allMeasure = []
 class Measure():
     def __init__(self,name,increase,lead_time):
         self.name = name
