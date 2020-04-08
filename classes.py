@@ -107,14 +107,16 @@ class FloodProtection:
         self.protection_level = baseline_level #initial level of flood protection
         self.barrier = moveable
         self.description = description
-        self.underconstruction = 0
+        self.underconstruction = 0 #indicates the time the current construction process takes
+        self.underconstruction_height = 0 #indicates the height by which the construction is planned to be increased
         
-    def update_protection_level(self,start,end,newvalue,lead_time):
+    def update_protection_level(self,start,end,newvalue,heightening,lead_time):
         "Update the flood protection level  from start to end timestep with a new value"
         self.protection_level[start:end] = [newvalue] * (end-start)
         
-        "Indicate that the Flood Protection object is currently under construction for n years"
+        "Indicate that the Flood Protection object is currently under construction for n years (this value will count down)"
         self.underconstruction = lead_time
+        self.underconstruction_height = heightening
          
     def reset_protection_level(self):
         "Reset the flood protection level to the level when it was initiated"
@@ -144,10 +146,11 @@ class ResidentialArea():
         self.trust_0 = trust_0
     
     def init_time(self,time): #If the model is run over time, initialise lists to store the results for the variables of interest
-        self.trust_t = [None] * len(time)
+        self.trust_t = [float("NaN")] * len(time)
         self.trust_t[0] = self.trust_0 #set initial condition
         self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
-        self.flood_history = [None] * len(time)
+        self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
+        self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
     
     def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
