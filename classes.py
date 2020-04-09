@@ -2,6 +2,7 @@ import csv
 import numpy as np
 import os
 from abc import ABC, abstractmethod
+from math import log, exp
 
 
 #TRACK THE OBJECTS THAT WERE INITIATED
@@ -229,3 +230,57 @@ def evaluate_event(water_level_difference,alarming_conditions,report):
             break
     trust = value[1]
     return trust
+
+def Gumbel(x,mu,beta):
+    "Returns the cumulative probability that X <= xp"
+    return exp(-1* exp((mu-x)/beta))
+
+def Gumbel_inverse(RP,mu,beta):
+    "Returns the water level h (m) for a Gumbel distributed PDF"
+    waterlevel = mu - beta * log(-1 * log((RP-1)/RP))
+    return waterlevel
+
+def Gumbel_RP(h,mu,beta):
+    "Returns the Return Period (years) of the event with a certain storm surge height in m"
+    return 1/(1-Gumbel(h,mu,beta))
+
+#CORE MODEL? YES BUT NOT EFFICIENT - CAN BE REPLACED BY VECTORIZED FUNCTION USED IN THE CLIMATE CHANGE MODULE
+def risk_FP(dam,RPs,PL):
+    """
+    Calculates the flood risk from damage estimates and corresponding return periods by trapezoidal integration, 
+    accounting for the flood protection in place. 
+    
+    Arguments:
+        *dam* (list) - damage estimates (e.g. Euro's) - from high to low RPs
+        *RPs* (list) - the return periods (in years) of the events corresponding to these damage estimates - from high to low RPs (order of both lists should match!) 
+        *PL* (integer) - the flood protection level in years
+    
+    Returns:
+        *risk* (float) - the estimated flood risk in Euro/y
+    
+    Note that this calculation is not trivial and contains important assumptions about the risk calculation:
+     - Damage for RPs higher than the largest RP equals the damage of the largest RP
+     - Damage for RPs lower than the smallest RP is 0.
+     - Damage of events in between known RPs are interpolated linearly with RP.
+    """
+    if not sorted(RPs, reverse=True) == RPs:
+        raise ValueError('RPs is not provided in the right format. Should be a descending list of RPs, e.g. [500,100,10]')
+    
+    if RPs[-1] < PL < RPs[0]: #if protection level is somewhere between the minimum and maximum available return period
+        pos = RPs.index(next(i for i in RPs if i < PL)) #find position of first RP value < PL; this is the point which need to be altered
+        dam = dam[0:pos+1] #remove all the values with smaller RPs than the PL
+        dam[pos] = np.interp(x=(1/PL),xp=[(1/RPs[pos-1]),(1/RPs[pos])],fp=[dam[pos-1],dam[pos]]) #interpolate the damage at the RP of the PL
+        #note that you should interpolate over the probabilities/frequences (therefore the 1/X), not over the RPs; this gives different results
+        RPs[pos] = PL #take the PL as the last RP...
+        RPs = RPs[0:pos+1] #... and remove all the other RPs
+
+    elif PL >= RPs[0]: #protection level is larger than the largest simulated event
+        return (1/PL) * dam[0] #damage is return frequence of PL times the damage of the most extreme event
+
+    #not necessary to check other condition (PL <= 10 year -> then just integrate over the available damages, don't assume additional damage)
+     
+    dam.insert(0,dam[0]) #add the maximum damage to the list again (for the 1:inf event)
+    Rfs = [1 / RP for RP in RPs] #calculate the return frequencies (probabilities) of the damage estimates
+    Rfs.insert(0,0) #add the probability of the 1:inf event
+    integral = np.trapz(y=dam,x=Rfs).round(2)
+    return integral
