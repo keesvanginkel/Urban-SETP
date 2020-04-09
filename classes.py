@@ -5,17 +5,17 @@ from abc import ABC, abstractmethod
 
 
 #TRACK THE OBJECTS THAT WERE INITIATED
-allMeasure = []
 allSurgeSeries = []   
 #allFloodProtection = [] #List with all the flood protection objects relevant for the city
 #allResidentialArea = [] #List of all the residential areas in the city
+
+
 
 class Model():
     def __init__(self,name):
         self.name = name
         self.allFloodProtection = [] #List with all the flood protection objects relevant for the city
         self.allResidentialArea = [] #list with all the residential areas in the city
-        self.allMeasures = [] #list with all possible flood protection measures
         self.Parameters = {} #Dict containing all model parameters
         
     def add_FloodProtection(self,FloodProtection): #Add flood protection object to model
@@ -24,11 +24,11 @@ class Model():
     def add_ResidentialArea(self,ResidentialArea): #Add residential area to model
         self.allResidentialArea.append(ResidentialArea)
         
-    def add_Measure_FloodProtection(self,Measure_FloodProtection):
-        self.allMeasures.append(Measure_FloodProtection)
+    #def add_Measure_FloodProtection(self,Measure_FloodProtection):
+    #    self.allMeasures.append(Measure_FloodProtection)
         
-    def add_Measure_ResidentialArea(self,Measure_ResidentialArea):
-        self.allMeasures.append(Measure_ResidentialArea)
+    #def add_Measure_ResidentialArea(self,Measure_ResidentialArea):
+    #    self.allMeasures.append(Measure_ResidentialArea)
         
     def add_Parameter(self,parameter_name,parameter_value): #Add parameter to the dict containing all parameters
         self.Parameters[parameter_name] = parameter_value
@@ -104,31 +104,17 @@ class FloodProtection:
     def __init__(self,name,baseline_level,moveable,description=None):
         self.name = name #Name of the flood protection object (string)
         self.baseline_level = baseline_level #initial level of flood protection
-        self.protection_level = baseline_level #initial level of flood protection
+        self.protection_level = baseline_level #is something that changes of time
         self.barrier = moveable
         self.description = description
-        self.underconstruction = 0 #indicates the time the current construction process takes
-        self.underconstruction_height = 0 #indicates the height by which the construction is planned to be increased
+        self.activeMeasure = [] #initially, there are no active measures for the FP object
         
-    def update_protection_level(self,start,end,newvalue,heightening,lead_time):
-        "Update the flood protection level  from start to end timestep with a new value"
-        self.protection_level[start:end] = [newvalue] * (end-start)
-        
-        "Indicate that the Flood Protection object is currently under construction for n years (this value will count down)"
-        self.underconstruction = lead_time
-        self.underconstruction_height = heightening
-         
     def reset_protection_level(self):
         "Reset the flood protection level to the level when it was initiated"
         self.protection_level = self.baseline_level
-        
-    def construction_progress(self):
-        "Withdraw from the construction time"
-        if self.underconstruction > 0:
-            self.underconstruction = self.underconstruction - 1
-    
+            
     def __repr__(self):
-        return self.name + int(self.baseline_level) + self.protection_level + self.barrier + self.description
+        return self.name + str(self.baseline_level) + str(self.protection_level) + str(self.barrier) + self.description
     
     def __str__(self): #this is what you see if you say "print(object)"
         return self.name + str(self.protection_level)
@@ -181,19 +167,45 @@ class ResidentialArea():
     def __str__(self): #this is what you see if you say "print(object)" #readable
         return self.__dict__
 
+    
+    
+allactiveMeasure = []
 
+def allactiveMeasure_reset():
+    allactiveMeasure = []
+    
 class Measure():
     def __init__(self,name,lead_time):
         self.name = name
-        self.lead_time = lead_time
+        self.lead_time = lead_time #time it takes to implement the measure
         
     def __repr__(self):
         return self.name + " " + str(self.lead_time) + " " + str(self.heightening)
+        
+    def plan_measure(self,apply_to):
+        self.apply_to = apply_to #name of the object to which measure should be applied
+        #hier nu ergens gaan kijken wat voor maatregelen er precies zijn
+        self.time_to_implementation = self.lead_time
+        allactiveMeasure.append(self)
+        #### houd ergens bij in de historie dat je deze measure gepland hebt.
+        
+    def countdown(self,i,end):#counts down, and if counter = 0 implements the measure
+        if self.time_to_implementation > 0:
+            self.time_to_implementation = self.time_to_implementation - 1
+        elif self.time_to_implementation == 0:
+            self.implement_measure(i,end)
         
 class Measure_FloodProtection(Measure):
     def __init__(self,name,lead_time,heightening):
         super().__init__(name,lead_time)
         self.heightening = heightening
+    
+    def implement_measure(self,i,end):
+        #print(self.apply_to.protection_level)
+        #print(self.heightening)
+        self.apply_to.protection_level[i:end] = [self.apply_to.protection_level[i] + self.heightening] * (end-i)
+        #print(self.apply_to.protection_level)
+        allactiveMeasure.remove(self) #remove the measure from the active measure list
         
 class Measure_ResidentialArea(Measure):
     def __init__(self,name,lead_time,heightening):
