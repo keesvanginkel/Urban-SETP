@@ -138,6 +138,8 @@ class ResidentialArea():
         self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
         self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
         self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
+        self.risk = [float("NaN")] * len(time) #to save the objective risk
+        self.protection_level_rp = [float("NaN")] * len(time) #save the protection level of the return period #TODO: BETTER TO DO THIS AT THE LEVEL OF THE FLOOD PROTECTION OBJECT
     
     def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
