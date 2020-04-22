@@ -110,6 +110,10 @@ class FloodProtection:
         self.description = description
         self.activeMeasure = [] #initially, there are no active measures for the FP object
         
+    def init_time(self,time): #If the model is run over time, initialise lists to store the results for the variables of interest
+        self.protection_level = [self.baseline_level] * len(time) #store the development of flood protection over time
+        self.measure_history = [0] * len(time) #store in which timestep which measures were taken
+        
     def reset_protection_level(self):
         "Reset the flood protection level to the level when it was initiated"
         self.protection_level = self.baseline_level
@@ -185,12 +189,13 @@ class Measure():
     def __repr__(self):
         return self.name + " " + str(self.lead_time) + " " + str(self.heightening)
         
-    def plan_measure(self,apply_to):
-        self.apply_to = apply_to #name of the object to which measure should be applied
+    def plan_measure(self,apply_to,i):
+        self.apply_to = apply_to #flood protection object to which measure should be applied
         #hier nu ergens gaan kijken wat voor maatregelen er precies zijn
         self.time_to_implementation = self.lead_time
         allactiveMeasure.append(self)
         #### houd ergens bij in de historie dat je deze measure gepland hebt.
+        apply_to.measure_history[i] = self.heightening #can be made nicer
         
     def countdown(self,i,end):#counts down, and if counter = 0 implements the measure
         if self.time_to_implementation > 0:
