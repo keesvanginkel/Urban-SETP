@@ -144,23 +144,25 @@ class FloodProtection:
 class ResidentialArea():
     #trust_0 = 70 #initial trust of citizens, same for all residential areas
     
-    def __init__(self,name,elevation,surface_area,dam_pars,protected_by,description=None,trust_0=70):
+    def __init__(self,name,elevation,surface_area,dam_pars,protected_by,description=None):
         self.name = name #Name of the object (string)
         self.elevation = elevation #Elevation of the Residential Area in m
         self.surface_area = surface_area #Surface area in km2
         self.dam_pars = dam_pars #Parameters for the depth-damage calculation in the area
         self.protected_by = protected_by #Names of the FloodProtection objects it is protected by
         self.description = description
-        self.trust_0 = trust_0
     
-    def init_time(self,time): #If the model is run over time, initialise lists to store the results for the variables of interest
+    def init_time(self,time,trust_0=70,risk_perception_0=0): #If the model is run over time, initialise lists to store the results for the variables of interest
         self.trust_t = [float("NaN")] * len(time)
-        self.trust_t[0] = self.trust_0 #set initial condition
+        self.trust_t[0] = trust_0 #set initial condition
         self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
         self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
         self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
         self.risk = [float("NaN")] * len(time) #to save the objective risk
         self.protection_level_rp = [float("NaN")] * len(time) #save the protection level of the return period #TODO: BETTER TO DO THIS AT THE LEVEL OF THE FLOOD PROTECTION OBJECT
+        self.risk_perception = [float("NaN")] * len(time) #Fluctuating risk perception indicator
+        self.risk_perception[0] = risk_perception_0
+        #Varies between 0 and 1, with 0.5 indicating that perceptions equals objective risk
     
     def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
@@ -183,8 +185,52 @@ class ResidentialArea():
         """
         dam_fraction = np.interp(inundation,self.dam_pars[1],self.dam_pars[2]) #fraction of max damage
         max_damage = self.dam_pars[0]
-        return int(round(max_damage * 10**6 * self.surface_area * dam_fraction))
-                    
+        return int(round(max_damage * 10**6 * self.surface_area * dam_fraction))      
+    
+    def weigh_RP_Bayesian(self,time,Bayesian_pars,I_exp_interp,I_social=0.5,I_media=0.5):
+        """"
+        Apply Bayesian learning to the Risk Perception
+        Adapted from Haer et al. (2017) citing Viscusi (1985,1989)
+        
+        Input:
+            *time* (int) : timestep of the model
+            *Bayesian_pars* (dict) : Weighting factors a,b,c,d for the Bayesian updating
+            *I_exp_max* (float) : Water depth at which the maximum experience occurs
+            *I_social* (float) : Impact of neighbours (if any)
+            *I_media* (float) : Impact of media (if any)
+            
+        Returns:
+            *RP_t* (float) : The risk perception in the current timestep
+        """
+        #Unpack the Bayesian weighing pars assigned to the model
+        if self.flood_history[time] > 0: #in case of a flood
+            b = Bayesian_pars["b_flood"]
+            a = Bayesian_pars["a_flood"] * b
+            
+            #Calculate the magnitude of the flood experience
+            depth = self.flood_history[time]  #water depth
+            
+            #unpack values to enable the linear interpolation
+            xp = I_exp_interp['xp']
+            fp = I_exp_interp['fp']
+            #linear interpolation of I_exp
+            I_exp = np.interp(depth,xp,fp,left=0,right=1)
+        
+        else:
+            a = Bayesian_pars["a_noflood"] #no flood
+            b = Bayesian_pars["b_noflood"]
+            I_exp = 0
+        
+        c = Bayesian_pars["c"]
+        d = Bayesian_pars["d"]
+        
+
+        
+        #Function should not be applied in the first timestep t=0, use initial condition instead
+        self.risk_perception[time] = (
+        a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
+        a + b + c + d)
+    
     def __repr__(self): #this is wat you see if you say "object" (without printing)
         return self.name + " Elevation: " + str(self.elevation) + "\n Protected by: " + str(self.protected_by)
         
