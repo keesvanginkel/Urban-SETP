@@ -92,7 +92,24 @@ class SurgeSeries:
     def __str__(self): #this is what you see if you say "print(object)" meant to be simple
         return self.name + " " + self.description + "\n" +  str(list(zip(self.years,self.surgelevel)))
 
+allTrendSeries = []
 
+class TrendSeries:
+    def __init__(self,name):
+        self.name = name
+        allTrendSeries.append(self)
+
+    def from_csv(self,filename):
+        filename = os.path.join("SurgeSeries",filename)
+        years = []
+        surgelevel = []
+        with open(filename) as f:
+            reader = csv.reader(f)
+            for row in reader:
+                years.append(row[0])
+                surgelevel.append(row[1])
+        self.years = [int(i) for i in years]
+        self.surgelevel = [float(i) for i in surgelevel] #convert strings to floats
 
 class FloodProtection:
     """
