@@ -163,7 +163,8 @@ class ResidentialArea():
         self.risk_perception = [float("NaN")] * len(time) #Fluctuating risk perception indicator
         self.risk_perception[0] = risk_perception_0
         #Varies between 0 and 1, with 0.5 indicating that perceptions equals objective risk
-    
+        self.risk_perceived = [float("NaN")] * len(time) #to save the subjective/perceived risk
+        
     def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
             for j in self.protected_by: #Iterate over the structures the area is protected by (for now only one! -> later expand and make decision rules if multiple exist)
@@ -187,9 +188,10 @@ class ResidentialArea():
         max_damage = self.dam_pars[0]
         return int(round(max_damage * 10**6 * self.surface_area * dam_fraction))      
     
-    def weigh_RP_Bayesian(self,time,Bayesian_pars,I_exp_interp,I_social=0.5,I_media=0.5):
+    def weigh_RP_Bayesian(self,time,Bayesian_pars,I_exp_interp,I_social=0,I_media=0.5):
         """"
         Apply Bayesian learning to the Risk Perception
+        This varies between 0 () and 1
         Adapted from Haer et al. (2017) citing Viscusi (1985,1989)
         
         Input:
@@ -200,7 +202,7 @@ class ResidentialArea():
             *I_media* (float) : Impact of media (if any)
             
         Returns:
-            *RP_t* (float) : The risk perception in the current timestep
+            *self.risk_perception(time)* (float) : The risk perception in the current timestep
         """
         #Unpack the Bayesian weighing pars assigned to the model
         if self.flood_history[time] > 0: #in case of a flood
@@ -229,8 +231,8 @@ class ResidentialArea():
         #Function should not be applied in the first timestep t=0, use initial condition instead
         self.risk_perception[time] = (
         a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
-        a + b + c + d)
-    
+        a + b + c + d)    
+        
     def __repr__(self): #this is wat you see if you say "object" (without printing)
         return self.name + " Elevation: " + str(self.elevation) + "\n Protected by: " + str(self.protected_by)
         
@@ -314,7 +316,61 @@ def Gumbel_RP(h,mu,beta):
     "Returns the Return Period (years) of the event with a certain storm surge height in m"
     return 1/(1-Gumbel(h,mu,beta))
 
-#CORE MODEL? YES BUT NOT EFFICIENT - CAN BE REPLACED BY VECTORIZED FUNCTION USED IN THE CLIMATE CHANGE MODULE
+def shift_subjective_floods(return_periods,risk_perception_factor):
+    """
+    Shifts an objective series of return periods of flood events to account for changes in risk perception
+    Uses equation X from Haer et al., (2017)
+    
+    Arguments:
+        *return_periods* (list of floats) - return periods flood events [years]
+                         (float) - can also handle a single float
+        *risk_perception_factor* (float) - risk perception indicator [0,1]
+    
+    Returns:
+        *perceived_return_periods* (list of floats) - perceived return periods of flood events [years]
+    
+    The risk_perception_factor varies between 0 and 1 and is the ouput of the weigh_RP_Bayesian function
+     -> 0 represents overconfidence
+     -> 0.5 represents risk perception = actual risk
+     -> 1 represents to much fear
+    
+    """
+    RPs = return_periods
+    RPf = risk_perception_factor
+    
+    if not 0 <= RPf <= 1:
+        raise ValueError('Risk perception factor should be float between 0 and 1, not {}'.format(RPf))
+    
+    
+    ################ ONLY FOR PROPERLY HANDLING FLOATS AND INTEGERS #############
+    convertback = False #by default don't convert list back to float
+    if isinstance(RPs,(int,float)): #convert instances or floats to lift
+        convertback = True #need to convert back when returning!
+        RPs = [RPs] #add to list
+    ################ END #############
+    
+    RPs_shifted = [None] * len(RPs)
+    
+    #Translate the value between 0 and 1 to a value between -10 to 10
+    factor = 10**(2*RPf-1) #Botzen et al., 2009, Dutch Households
+    
+    for i, RP in enumerate(RPs):
+        p = 1/RP #probability is the inverse of the return period
+        pi = factor * p #perceived probability is obtained by multiplication by the factor
+        RPs_shifted[i] = 1/pi #perceived return period it the inverse of the perceived probability
+    
+    ################ ONLY FOR PROPERLY HANDLING FLOATS AND INTEGERS #############
+    if convertback:
+        RPs_shifted = RPs_shifted[0]
+    ################ END #############
+    
+    return RPs_shifted
+        
+        
+    
+    
+
+#Taken from the OSdaMage model (vs 1.0)
 def risk_FP(dam,RPs,PL):
     """
     Calculates the flood risk from damage estimates and corresponding return periods by trapezoidal integration, 
