@@ -7,10 +7,6 @@ from math import log, exp
 
 #TRACK THE OBJECTS THAT WERE INITIATED
 allSurgeSeries = []   
-#allFloodProtection = [] #List with all the flood protection objects relevant for the city
-#allResidentialArea = [] #List of all the residential areas in the city
-
-
 
 class Model():
     def __init__(self,name):
@@ -55,61 +51,146 @@ class Mayor(ABC): #is subclass of ABC (abstract base class)
     @abstractmethod
     def get_name(self):
         pass
+    
+    def __str__(self): #this is what you see if you say "print(object)" #readable
+        return self.get_name()
         
 
-class SurgeSeries:
-    "Common class for all storm surge series"
-    def __init__(self,allSurgeSeries,name=None,description=None,surgelevel=None,years=np.arange(2021,2121)):
-        self.name = name
-        self.description = description
-        self.surgelevel = surgelevel
-        self.years = years
-        allSurgeSeries.append(self) #Add to the overview of all flood protection objects
-        
-    def to_csv(self,filename):
-        "Write to a csv file (weakness: does not save the metadata yet)"
-        zipped = list(zip(self.years,self.surgelevel)) #zip the two lists
-        with open(os.path.join("SurgeSeries",filename), "w",newline='') as f:
-            writer = csv.writer(f)
-            for row in zipped:
-                writer.writerow(row)
+
+
+allSLR_Scenario = []
+allSurgeHeight = []
+allSurgeLevel = []
+
+class SLR_Scenario:
+    """
+    A SLR_Scenario is a timeseries indicating the degree of
+    sea level rise for each timestep.
     
+    #TODO: add that it remembers the RCP?
+    """
+    def __init__(self,name):
+        allSLR_Scenario.append(self)
+        self.name = name
+
     def from_csv(self,filename):
-        filename = os.path.join("SurgeSeries",filename)
+        """Add data from SLR trendseries from a csv file
+        First column should contain the years
+        Second column the water levels [m]
+        """ 
+        filepath = os.path.join("SLR_projections",filename)
+        years = []
+        sealevel = []
+        
+        with open(filepath) as f:
+            reader = csv.reader(f)
+            for row in reader:
+                years.append(row[0])
+                sealevel.append(row[1])
+
+        self.years = [int(i) for i in years]
+        self.sealevel = [float(i) for i in sealevel] #convert strings to floats
+        
+    def __repr__(self):
+        return self.name +  "\n" + str(list(zip(self.years,self.sealevel)))
+    
+    def __str__(self):
+        return self.name
+    
+class SurgeHeight:
+    """
+    A SurgeHeight is a timeseries indicating the storm surge height
+    irrespective of the sea level.
+    
+    This should be added to the sea level to get the storm surge level
+    
+    """
+    def __init__(self,name):
+        allSurgeHeight.append(self)
+        self.name = name   
+
+    def from_csv(self,filename):
+        """Get the Surge Height from a transient surge scenario
+        """ 
+        filepath = os.path.join("SurgeHeight",filename)
         years = []
         surgelevel = []
-        with open(filename) as f:
+        
+        with open(filepath) as f:
             reader = csv.reader(f)
             for row in reader:
                 years.append(row[0])
                 surgelevel.append(row[1])
+
         self.years = [int(i) for i in years]
-        self.surgelevel = [float(i) for i in surgelevel] #convert strings to floats
+        self.surgeheight = [float(i) for i in surgelevel] #convert strings to floats
+
+    def __repr__(self):
+        return self.name +  "\n" + str(list(zip(self.years,self.surgeheight)))
+    
+    def __str__(self):
+        return self.name
+    
+class SurgeLevel:
+    """
+    A SurgeLevel is a timeseries indicating the storm surge level per year,
+    which is the sum of sea level rise + surge height in that year.
+    
+    """ 
+    def __init__(self,name=None):
+        self.name = name
+        allSurgeLevel.append(self) #Add to the overview of all flood protection objects
+    
+    def from_combination(self,SLR_Scenario,SurgeHeight):
+        """
+        Fill the years and surge levels by combining a SLR Scenario object and
+        a SurgeHeight object
+        Will only calculate the sum for years for which data is available in both input timeseries
         
+        """
+        self.corresponding_SLR_Scenario = SLR_Scenario
+        self.corresponding_SurgeHeight = SurgeHeight
+        
+        startvalue = max(min(SLR_Scenario.years),min(SurgeHeight.years))
+        endvalue = min(max(SLR_Scenario.years),max(SurgeHeight.years))
+        self.years = list(range(startvalue,endvalue+1)) 
+        sl = SLR_Scenario.sealevel[SLR_Scenario.years.index(startvalue):SLR_Scenario.years.index(endvalue)+1] #slice the correct sea levels
+        sh = SurgeHeight.surgeheight[SurgeHeight.years.index(startvalue):SurgeHeight.years.index(endvalue)+1] #slice the correct sea levels
+        self.surgelevel = [sum(x) for x in zip(sl,sh)] #element-wise sum
+
     def __repr__(self): #this is wat you see if you say "object" (without printing) meant to be detailed
-        return self.name + " " + self.description + "\n" + str(list(zip(self.years,self.surgelevel)))
+        return self.name
         
     def __str__(self): #this is what you see if you say "print(object)" meant to be simple
-        return self.name + " " + self.description + "\n" +  str(list(zip(self.years,self.surgelevel)))
+        return self.name
+    
+    
+def combine_SurgeLevel(SLR_Scenario,SurgeHeight):
+    name = SLR_Scenario.name + "__" + SurgeHeight.name
+    instance = SurgeLevel(name=name) #Create new instance of object
+    instance.from_combination(SLR_Scenario,SurgeHeight) #derive data from combining both sources
+        
+    #def to_csv(self,filename):
+    #    "Write to a csv file (weakness: does not save the metadata yet)"
+    #    zipped = list(zip(self.years,self.surgelevel)) #zip the two lists
+    #    with open(os.path.join("SurgeSeries",filename), "w",newline='') as f:
+    #        writer = csv.writer(f)
+    #        for row in zipped:
+    #            writer.writerow(row)
+    
+    #def from_csv(self,filename):
+    #    filename = os.path.join("SurgeSeries",filename)
+    #    years = []
+    #    surgelevel = []
+    #    with open(filename) as f:
+    #        reader = csv.reader(f)
+    #        for row in reader:
+    #            years.append(row[0])
+    #            surgelevel.append(row[1])
+    #    self.years = [int(i) for i in years]
+    #    self.surgelevel = [float(i) for i in surgelevel] #convert strings to floats
+        
 
-allTrendSeries = []
-
-class TrendSeries:
-    def __init__(self,name):
-        self.name = name
-        allTrendSeries.append(self)
-
-    def from_csv(self,filename):
-        filename = os.path.join("SurgeSeries",filename)
-        years = []
-        surgelevel = []
-        with open(filename) as f:
-            reader = csv.reader(f)
-            for row in reader:
-                years.append(row[0])
-                surgelevel.append(row[1])
-        self.years = [int(i) for i in years]
-        self.surgelevel = [float(i) for i in surgelevel] #convert strings to floats
 
 class FloodProtection:
     """
