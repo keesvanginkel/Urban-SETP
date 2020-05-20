@@ -73,12 +73,11 @@ class SLR_Scenario:
         allSLR_Scenario.append(self)
         self.name = name
 
-    def from_csv(self,filename):
+    def from_csv(self,filepath):
         """Add data from SLR trendseries from a csv file
         First column should contain the years
         Second column the water levels [m]
         """ 
-        filepath = os.path.join("SLR_projections",filename)
         years = []
         sealevel = []
         
@@ -109,10 +108,9 @@ class SurgeHeight:
         allSurgeHeight.append(self)
         self.name = name   
 
-    def from_csv(self,filename):
+    def from_csv(self,filepath):
         """Get the Surge Height from a transient surge scenario
         """ 
-        filepath = os.path.join("SurgeHeight",filename)
         years = []
         surgelevel = []
         
