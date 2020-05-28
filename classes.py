@@ -13,7 +13,7 @@ class Model():
         self.name = name
         self.allFloodProtection = [] #List with all the flood protection objects relevant for the city
         self.allResidentialArea = [] #list with all the residential areas in the city
-        self.Parameters = {} #Dict containing all model parameters
+        self.Parameters = {} #Dict containing all model parameters <TODO: Why should you do this with a dict; can be objects also!>
         
     def add_FloodProtection(self,FloodProtection): #Add flood protection object to model
         self.allFloodProtection.append(FloodProtection)
@@ -223,10 +223,13 @@ class FloodProtection:
 class ResidentialArea():
     #trust_0 = 70 #initial trust of citizens, same for all residential areas
     
-    def __init__(self,name,elevation,surface_area,dam_pars,protected_by,description=None):
+    def __init__(self,name,elevation,surface_area,inhabitants,nr_houses,house_price_0,dam_pars,protected_by,description=None):
         self.name = name #Name of the object (string)
         self.elevation = elevation #Elevation of the Residential Area in m
         self.surface_area = surface_area #Surface area in km2
+        self.inhabitants = inhabitants #nr of inhabitants
+        self.nr_houses = nr_houses #nr of houses
+        self.house_price_0 = house_price_0 #price of a house at t0 
         self.dam_pars = dam_pars #Parameters for the depth-damage calculation in the area
         self.protected_by = protected_by #Names of the FloodProtection objects it is protected by
         self.description = description
@@ -249,6 +252,19 @@ class ResidentialArea():
             for j in self.protected_by: #Iterate over the structures the area is protected by (for now only one! -> later expand and make decision rules if multiple exist)
                 if i.name == j:
                     self.protection_level = i.protection_level
+    
+    def init_Bayesian(self,Bayesian_pars):
+        """
+        Add the weighting factors of the Bayesian weighting to to the residential area
+        
+        Arguments:
+            *self* (ResidentialArea) : The residential area with all it's properties
+            *Bayesian_pars* (Bayesian_pars) : Object containing Bayesian weighting parameters 
+        """
+        pass
+    
+    def residential_capital(self):
+        print(self.name + ": \u20ac" + str(self.nr_houses*self.house_price_0) + " _____ " + str(round(self.nr_houses*self.house_price_0*10**(-6))) + "mln \u20ac" )
   
     def calculate_damage(self,inundation):
         """
@@ -304,10 +320,8 @@ class ResidentialArea():
         
         c = Bayesian_pars["c"]
         d = Bayesian_pars["d"]
-        
-
-        
-        #Function should not be applied in the first timestep t=0, use initial condition instead
+           
+        #Function should not be applied in the first timestep t=0, use initial condition instead in this timestep
         self.risk_perception[time] = (
         a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
         a + b + c + d)    
@@ -318,7 +332,33 @@ class ResidentialArea():
     def __str__(self): #this is what you see if you say "print(object)" #readable
         return self.__dict__
 
+class Bayesian_pars():
+    """
+    Class for objects containing the parameters for Bayesian weighting.
+
+    Expects to use the following equation for Bayesian weighting: (Haer et al., 2017)
     
+                 [a*RP_t + b*I_experience + c*I_media + d*I_neighbours] 
+    RP_t+1 =    --------------------------------------------------------
+                                  [a + b + c + d]
+    
+    Convention for arguments a-d
+    if list of length 1: this weighting factor always applies
+    if list of length 2: list[0] = no flood; list[1] = flood
+    if list of length 3: list[0] = no flood; list[1] = near miss; list[2] = flood
+    
+    Arguments:
+        *a* (list of floats) : weighting factor for risk perception in the previous timestep
+        *b* (list of floats) : weighting factor for flood experience in the current timestep
+        *c* (list of floats) : weighting factor for impact of the media/science/other external influence
+        *d* (list of floats) : weighting factor for experience in other regions
+    
+    """
+    def __init__(self,a,b,c,d):
+        self.a = a
+        self.b = b
+        self.c = c
+        self.d = d
     
 allactiveMeasure = []
 
@@ -449,7 +489,7 @@ def shift_subjective_floods(return_periods,risk_perception_factor):
     
     
 
-#Taken from the OSdaMage model (vs 1.0)
+#Taken from the OSdaMage model (vs 1.0) [Van Ginkel et al. 2020]
 def risk_FP(dam,RPs,PL):
     """
     Calculates the flood risk from damage estimates and corresponding return periods by trapezoidal integration, 
