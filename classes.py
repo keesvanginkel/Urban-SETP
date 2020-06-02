@@ -239,6 +239,7 @@ class ResidentialArea():
         self.trust_t[0] = trust_0 #set initial condition
         self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
         self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
+        self.nearmiss_history = [float("NaN")] * len(time) #SAVE THE DIFFERENCE BETWEEN THE DIKE HEIGHT AND PROTECTION LEVEL IN CASE OF NEAR MISS [0, 0.5]
         self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
         self.risk = [float("NaN")] * len(time) #to save the objective risk
         self.protection_level_rp = [float("NaN")] * len(time) #save the protection level of the return period #TODO: BETTER TO DO THIS AT THE LEVEL OF THE FLOOD PROTECTION OBJECT
@@ -283,7 +284,7 @@ class ResidentialArea():
         max_damage = self.dam_pars[0]
         return int(round(max_damage * 10**6 * self.surface_area * dam_fraction))      
     
-    def weigh_RP_Bayesian(self,time,Bayesian_pars,I_exp_interp,I_social=0,I_media=0.5):
+    def weigh_RP_Bayesian_old(self,time,Bayesian_pars,I_exp_interp,I_social=0,I_media=0.5): #DEPRECIATED FUNCTION 28 MAY
         """"
         Apply Bayesian learning to the Risk Perception
         This varies between 0 () and 1
@@ -325,6 +326,60 @@ class ResidentialArea():
         self.risk_perception[time] = (
         a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
         a + b + c + d)    
+        
+    def weigh_RP_Bayesian(self,time,I_exp_interp,I_social=0.5,I_media=0.5):
+        """"
+        Apply Bayesian learning to the Risk Perception
+        This varies between 0 () and 1
+        Adapted from Haer et al. (2017) citing Viscusi (1985,1989)
+        
+        Input:
+            *time* (int) : timestep of the model
+            *I_exp_max* (float) : Water depth at which the maximum experience occurs [currently unused but hardcoded]
+            *I_social* (float) : Impact of neighbours (if any)
+            *I_media* (float) : Impact of media (if any)
+            
+        Returns:
+            *self.risk_perception(time)* (float) : The risk perception in the current timestep
+        """        
+        
+        depth = self.flood_history[time]  #water depth
+        nearmiss = self.nearmiss_history[time]
+        
+        if depth > 0: #IN CASE OF A FLOOD
+            #print('timestep: {}, region: {}, FLOOD!'.format(time,self.name))
+            a = self.Bayesian_pars.a[2] 
+            b = self.Bayesian_pars.b[2] 
+            c = self.Bayesian_pars.c[2] 
+            d = self.Bayesian_pars.d[2]
+            #unpack values to enable the linear interpolation
+            #TODO: CHANGE THE I_exp_interp(...)
+            #xp = I_exp_interp['xp'] 
+            #fp = I_exp_interp['fp']
+            #linear interpolation of I_exp
+            I_exp = np.interp(depth,[0,0.5],[0,1],left=0,right=1)
+            
+        else: #IF NO FLOOD OCCURS
+            if nearmiss > 0: #IN CASE OF A NEAR MISS
+                print('timestep: {}, region: {}, NEAR MISS!'.format(time,self.name))
+                a = self.Bayesian_pars.a[1] #Select the first weighting factor ...
+                b = self.Bayesian_pars.b[1] #... from the list of weighting factors ...
+                c = self.Bayesian_pars.c[1] #... (see docstring of Bayesian_pars class)
+                d = self.Bayesian_pars.d[1]
+                I_exp = np.interp(nearmiss,[0,0.5],[1,0],left=1,right=0)
+                print(I_exp)
+            else: #IN CASE OF A NO FLOOD NOR A NEAR MISS
+                #print('timestep: {}, region {}, NOTHING'.format(time,self.name))
+                a = self.Bayesian_pars.a[0] #Select the first weighting factor ...
+                b = self.Bayesian_pars.b[0] #... from the list of weighting factors ...
+                c = self.Bayesian_pars.c[0] #... (see docstring of Bayesian_pars class)
+                d = self.Bayesian_pars.d[0]
+                I_exp = 0 #does not impact the calculation, but needs to be defined #TODO NO HARDCODING      
+           
+        #Function should not be applied in the first timestep t=0, use initial condition instead in this timestep
+        self.risk_perception[time] = (
+        a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
+        a + b + c + d)  
         
     def __repr__(self): #this is wat you see if you say "object" (without printing)
         return self.name + " Elevation: " + str(self.elevation) + "\n Protected by: " + str(self.protected_by)
