@@ -361,13 +361,12 @@ class ResidentialArea():
             
         else: #IF NO FLOOD OCCURS
             if nearmiss > 0: #IN CASE OF A NEAR MISS
-                print('timestep: {}, region: {}, NEAR MISS!'.format(time,self.name))
+                #print('timestep: {}, region: {}, NEAR MISS!'.format(time,self.name))
                 a = self.Bayesian_pars.a[1] #Select the first weighting factor ...
                 b = self.Bayesian_pars.b[1] #... from the list of weighting factors ...
                 c = self.Bayesian_pars.c[1] #... (see docstring of Bayesian_pars class)
                 d = self.Bayesian_pars.d[1]
                 I_exp = np.interp(nearmiss,[0,0.5],[1,0],left=1,right=0)
-                print(I_exp)
             else: #IN CASE OF A NO FLOOD NOR A NEAR MISS
                 #print('timestep: {}, region {}, NOTHING'.format(time,self.name))
                 a = self.Bayesian_pars.a[0] #Select the first weighting factor ...
