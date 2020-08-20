@@ -15,7 +15,7 @@ from classes import *
 
 #SOME MEASURES THAT MANY MAYORS WILL USE
 small = Measure_FloodProtection("Minor Dike Heightening", 7, 0.5)
-large = Measure_FloodProtection("Major Dike Heightening", 12, 1)
+large = Measure_FloodProtection("Major Dike Heightening", 10, 1) #was 12
 
 class Kroket(Mayor):
     """
@@ -25,6 +25,12 @@ class Kroket(Mayor):
     
     """
     def get_name(self):
+        return('R. Active')
+    
+    def get_full_name(self):
+        return('mr. Ree Active')
+    
+    def get_nick_name(self):
         return('Berry Kroket')
     
     def apply_strategy(self,Model,SurgeLevel,i,time):
@@ -63,7 +69,7 @@ class Kroket(Mayor):
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
                     #print('Er was al een plan, maar het nieuwe is radicaler!!!')
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 5 #you can implement the new plan faster!
+                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster! #was 5 everywhere
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
@@ -124,7 +130,7 @@ class Lawkeeper(Mayor):
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
                     #print('Er was al een plan, maar het nieuwe is radicaler!!!')
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 5 #you can implement the new plan faster!
+                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster!
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
@@ -138,8 +144,11 @@ class Economicus(Mayor):
     """
     
     def get_name(self):
-        return('Mr. H. Economicus')
+        return('H. Economicus')
 
+    def get_full_name(self):
+        return('Mr. H. Economicus')
+    
     def apply_strategy(self,Model,SurgeLevel,i,time):
         
         #STRATEGY FOR THE CITY CENTRE
@@ -168,7 +177,7 @@ class Economicus(Mayor):
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
                     #print('Er was al een plan, maar het nieuwe is radicaler!!!')
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 5 #you can implement the new plan faster!
+                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster!
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
@@ -217,7 +226,7 @@ class Sentiment(Mayor):
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
                     #print('Er was al een plan, maar het nieuwe is radicaler!!!')
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 5 #you can implement the new plan faster!
+                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster!
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
