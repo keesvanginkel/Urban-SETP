@@ -151,6 +151,15 @@ class Economicus(Mayor):
     
     def apply_strategy(self,Model,SurgeLevel,i,time):
         
+        #STRATEGY FOR THE HEIJPLAAT
+        HP = Model.allResidentialArea[0] #Select the Heijplaat Residential Area object
+        
+        if hasattr(HP,'flood_proofing'): #Guarantee backward compat. (20 aug)
+            if HP.risk[i] > 0.5: #implement measure if risk gets above certain threshold
+                HP.flood_proofing[i:] = [True] * len(HP.flood_proofing[i:])
+                print('measure implemented in i={} and time={}'.format(i,time[i]))
+            
+        
         #STRATEGY FOR THE CITY CENTRE
         CC = Model.allResidentialArea[1]
         FP = Model.allFloodProtection[1] #the object to which to apply the heightening
@@ -183,6 +192,8 @@ class Economicus(Mayor):
    
             else: #there are no active measures
                 newmeasure.plan_measure(FP,i)
+            
+        
         
 class Sentiment(Mayor):
     """

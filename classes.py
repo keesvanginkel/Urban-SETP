@@ -248,6 +248,9 @@ class ResidentialArea():
         #Varies between 0 and 1, with 0.5 indicating that perceptions equals objective risk
         self.risk_perceived = [float("NaN")] * len(time) #to save the subjective/perceived risk
         
+        #Implemented on 20 August:
+        self.flood_proofing = [False] * len(time) #Boolean indicating if flood proofing was implemented
+        
     def match_with_FloodProtection(self,allFloodProtection): #TODO Make sure that it does not add it two times!
         for i in allFloodProtection: #Iterate over all possible FloodProtections 
             for j in self.protected_by: #Iterate over the structures the area is protected by (for now only one! -> later expand and make decision rules if multiple exist)
@@ -267,7 +270,7 @@ class ResidentialArea():
     def residential_capital(self):
         print(self.name + ": \u20ac" + str(self.nr_houses*self.house_price_0) + " _____ " + str(round(self.nr_houses*self.house_price_0*10**(-6))) + "mln \u20ac" )
   
-    def calculate_damage(self,inundation):
+    def calculate_damage(self,inundation,timestep=0):
         """
         Calculate flood damage for a residential area
 
@@ -276,13 +279,27 @@ class ResidentialArea():
                                   euro/m2            m      (-)
             *inundation* (float) : Inundation depth in m
             *surface_area* (float) : Surface area of the region in km2
+            *timestep* (int) : (optionally) model timestep to check if flood proofing was implemented
 
         Returns:
             *damage* (float) : damage to the area in 2010-Euros
+            
+            #TODO: OPLETTEN, JE ROEPT DEZE FUNCTIE OOK NOG EEN KEER AAN BIJ DE RISICO-BEREKENING!!!
         """
+              
         dam_fraction = np.interp(inundation,self.dam_pars[1],self.dam_pars[2]) #fraction of max damage
         max_damage = self.dam_pars[0]
-        return int(round(max_damage * 10**6 * self.surface_area * dam_fraction))      
+        damage = int(round(max_damage * 10**6 * self.surface_area * dam_fraction))
+        
+        #TO GUARANTEE BACKWARD COMPATABILITY, CHECK IF THE FLOOD PROOFING WAS IMPLEMENTED AT ALL
+        if hasattr(self,'flood_proofing'):
+            if self.flood_proofing[timestep]: #if True, the flood_proofing is implemented in this timestep
+                #Carry out the flood proofing procedure of Haer et al., (2017)
+                if inundation < 1: #flood proofing only works if water depth < 1 m
+                    print('Flood proofing active in timestep {}'.format(timestep))
+                    damage = damage * 0.3 #70% reduction of damage
+                
+        return damage       
     
     def weigh_RP_Bayesian_old(self,time,Bayesian_pars,I_exp_interp,I_social=0,I_media=0.5): #DEPRECIATED FUNCTION 28 MAY
         """"
