@@ -157,7 +157,7 @@ class Economicus(Mayor):
         if hasattr(HP,'flood_proofing'): #Guarantee backward compat. (20 aug)
             if HP.risk[i] > 0.5: #implement measure if risk gets above certain threshold
                 HP.flood_proofing[i:] = [True] * len(HP.flood_proofing[i:])
-                print('measure implemented in i={} and time={}'.format(i,time[i]))
+                #print('measure implemented in i={} and time={}'.format(i,time[i]))
             
         
         #STRATEGY FOR THE CITY CENTRE
