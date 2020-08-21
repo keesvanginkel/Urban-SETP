@@ -19,7 +19,6 @@ MaxDamage_Residential = {
 #Tab Damage functions DamCurve_Residential_buildings
 depth = [0,0.5,1,1.5,2,3,4,5,6] #depth in meter
 dam_frac = [0,0.25,0.4,0.5,0.6,0.75,0.85,0.95,1.00] #damage fraction (-)
-
 dam_pars= (MaxDamage_Residential['Land-use_based'],depth,dam_frac) #all parameters for the damage assessment
 
 ##########################################################

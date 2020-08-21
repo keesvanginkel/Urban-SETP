@@ -3,11 +3,31 @@ import numpy as np
 import os
 from abc import ABC, abstractmethod
 from math import log, exp
+from copy import deepcopy
+from datetime import datetime
 
 
 #TRACK THE OBJECTS THAT WERE INITIATED
 allSurgeSeries = []   
 
+class Experiment():
+    """An experiment object is a unique combination of (1) one model (a city), 
+       (2) managed by a one mayor,
+       (3) in one storm surge scenario
+       containing all information of the objects AFTER running the model
+    """
+    
+    def __init__(self,Model,SurgeLevel,Mayor,name=None):
+        self.Model = deepcopy(Model)
+        self.SurgeLevel = deepcopy(SurgeLevel)
+        self.Mayor = deepcopy(Mayor)
+        self.time = datetime.now() #moment at which the experiment was saved 
+        if name is None: #If experiment is not provided with a name, make one!
+            self.name = "{}_{}_{}".format(Model.name,SurgeLevel.name,Mayor.get_name())
+    
+    def __repr__(self):
+        return self.name + " " + self.time.strftime("%Y/%m/%d, %H:%M:%S")
+        
 class Model():
     def __init__(self,name):
         self.name = name
@@ -296,7 +316,7 @@ class ResidentialArea():
             if self.flood_proofing[timestep]: #if True, the flood_proofing is implemented in this timestep
                 #Carry out the flood proofing procedure of Haer et al., (2017)
                 if inundation < 1: #flood proofing only works if water depth < 1 m
-                    print('Flood proofing active in timestep {}'.format(timestep))
+                    #print('Flood proofing active in timestep {}'.format(timestep))
                     damage = damage * 0.3 #70% reduction of damage
                 
         return damage       
