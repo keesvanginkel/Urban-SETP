@@ -20,6 +20,7 @@ MaxDamage_Residential = {
 depth = [0,0.5,1,1.5,2,3,4,5,6] #depth in meter
 dam_frac = [0,0.25,0.4,0.5,0.6,0.75,0.85,0.95,1.00] #damage fraction (-)
 dam_pars= (MaxDamage_Residential['Land-use_based'],depth,dam_frac) #all parameters for the damage assessment
+dam_pars_household = (MaxDamage_Residential['Object_based'],depth,dam_frac)
 
 ##########################################################
 ####                  MODEL COLLECTION                ####
@@ -43,8 +44,28 @@ dam_pars= (MaxDamage_Residential['Land-use_based'],depth,dam_frac) #all paramete
 Rotty = Model('Rotty') #Initiate the model class
 
 #Add residential areas to the model
-Rotty.add_ResidentialArea(ResidentialArea("Area_A",3,0.4,1500,750,300000,dam_pars,["No"],"Residential area A: the Heijplaat"))
-Rotty.add_ResidentialArea(ResidentialArea("Area_B",-1,25,500000,250000,350000,dam_pars,["Dike"],"Residential area B: City Centre"))
+Rotty.add_ResidentialArea(ResidentialArea(
+    name="Area_A",
+    elevation=3,
+    surface_area=0.4,
+    inhabitants = 1500,
+    nr_houses = 750,
+    house_price_0 = 300e3,
+    dam_pars = dam_pars, #TODO: dit is een beetje omslachtig, beter gewoon in 1 dict meegeven 
+    dam_pars_household = dam_pars_household,
+    protected_by = ["No"],
+    description = "Residential area A: the Heijplaat"))
+Rotty.add_ResidentialArea(ResidentialArea(
+    name="Area_B",
+    elevation=-1,
+    surface_area = 25,
+    inhabitants=500e3,
+    nr_houses = 250e3,
+    house_price_0 = 350e3,
+    dam_pars=dam_pars,
+    dam_pars_household = dam_pars_household,
+    protected_by=["Dike"],
+    description="Residential area B: City Centre"))
 
 #Add flood protection objections to the model
 Rotty.add_FloodProtection(FloodProtection("No",3.5,False,"Region without flood protection"))

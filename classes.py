@@ -269,14 +269,17 @@ class FloodProtection:
 class ResidentialArea():
     #trust_0 = 70 #initial trust of citizens, same for all residential areas
     
-    def __init__(self,name,elevation,surface_area,inhabitants,nr_houses,house_price_0,dam_pars,protected_by,description=None):
+    def __init__(self,name,elevation,surface_area,inhabitants,nr_houses,house_price_0,dam_pars,dam_pars_household,protected_by,description=None):
         self.name = name #Name of the object (string)
         self.elevation = elevation #Elevation of the Residential Area in m
         self.surface_area = surface_area #Surface area in km2
         self.inhabitants = inhabitants #nr of inhabitants
         self.nr_houses = nr_houses #nr of houses
-        self.house_price_0 = house_price_0 #price of a house at t0 
+        self.house_price_0 = house_price_0 #price of a house at t0
+        self.house_price_horizon = 80 #assume a time-horizon for house-time of 80 years
+        self.r = 0.03 #discount factor (per year)
         self.dam_pars = dam_pars #Parameters for the depth-damage calculation in the area
+        self.dam_pars_household = dam_pars_household #Parameter for the detph-damage calculation per household
         self.protected_by = protected_by #Names of the FloodProtection objects it is protected by
         self.description = description
     
@@ -287,12 +290,20 @@ class ResidentialArea():
         self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
         self.nearmiss_history = [float("NaN")] * len(time) #SAVE THE DIFFERENCE BETWEEN THE DIKE HEIGHT AND PROTECTION LEVEL IN CASE OF NEAR MISS [0, 0.5]
         self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
-        self.risk = [float("NaN")] * len(time) #to save the objective risk
+        self.risk = [float("NaN")] * len(time) #to save the objective risk per RA
+        self.risk_household = [float("NaN")] * len(time) #risk per household
+        self.risk_household_perceived = [float("NaN")] * len(time) #risk per household
+        self.risk_household_discounted = [float("NaN")] * len(time) #discounted risk per household
+        self.risk_household_discounted_perceived = [float("NaN")] * len(time) #discounted risk per household
         self.protection_level_rp = [float("NaN")] * len(time) #save the protection level of the return period #TODO: BETTER TO DO THIS AT THE LEVEL OF THE FLOOD PROTECTION OBJECT
         self.risk_perception = [float("NaN")] * len(time) #Fluctuating risk perception indicator
         self.risk_perception[0] = risk_perception_0
         #Varies between 0 and 1, with 0.5 indicating that perceptions equals objective risk
         self.risk_perceived = [float("NaN")] * len(time) #to save the subjective/perceived risk
+        self.house_price_t_subjective = [float("NaN")] * len(time) #To save the development of house prices over time
+        self.house_price_t_objective = [float("NaN")] * len(time) #To save the development of house prices over time
+        self.house_price_t_subjective[0] = self.house_price_0 # Set the first timestep
+        self.house_price_t_objective[0] = self.house_price_0 # Set the first timestep
         
         #Implemented on 20 August:
         self.flood_proofing = [False] * len(time) #Boolean indicating if flood proofing was implemented
@@ -330,7 +341,8 @@ class ResidentialArea():
         Returns:
             *damage* (float) : damage to the area in 2010-Euros
             
-            #TODO: OPLETTEN, JE ROEPT DEZE FUNCTIE OOK NOG EEN KEER AAN BIJ DE RISICO-BEREKENING!!!
+            #TODO: OPLETTEN, JE ROEPT DEZE FUNCTIE OOK NOG EEN KEER AAN BIJ DE RISICO-BEREKENING!!
+            #TODO: UPDATE THE DOCSTRING, USES ATTRIBUTE FROM .SELF RATHER THAN INPUT 
         """
               
         dam_fraction = np.interp(inundation,self.dam_pars[1],self.dam_pars[2]) #fraction of max damage
@@ -345,7 +357,33 @@ class ResidentialArea():
                     #print('Flood proofing active in timestep {}'.format(timestep))
                     damage = damage * 0.3 #70% reduction of damage
                 
-        return damage       
+        return damage
+    
+    def calculate_damage_household(self,inundation,timestep=0):
+        """
+        Calculate flood damage for one household in the residential area
+        
+        Input:
+            *inundation* (float) : Inundation depth in m
+            *timestep* (int) : (optionally) model timestep to check if flood proofing was implemented
+
+        Returns:
+            *damage* (float) : damage to a household in 2010-Euros
+            
+            #TODO: OPLETTEN, JE ROEPT DEZE FUNCTIE OOK NOG EEN KEER AAN BIJ DE RISICO-BEREKENING!!!
+        """
+        dam_fraction = np.interp(inundation,self.dam_pars_household[1],self.dam_pars_household[2]) #fraction of max damage
+        max_damage = self.dam_pars_household[0]
+        damage = int(round(max_damage*dam_fraction))
+        
+        #TO GUARANTEE BACKWARD COMPATABILITY, CHECK IF THE FLOOD PROOFING WAS IMPLEMENTED AT ALL
+        if hasattr(self,'flood_proofing'):
+            if self.flood_proofing[timestep]: #if True, the flood_proofing is implemented in this timestep
+                #Carry out the flood proofing procedure of Haer et al., (2017)
+                if inundation < 1: #flood proofing only works if water depth < 1 m
+                    #print('Flood proofing active in timestep {}'.format(timestep))
+                    damage = damage * 0.3 #70% reduction of damage  
+        return damage
     
     def weigh_RP_Bayesian_old(self,time,Bayesian_pars,I_exp_interp,I_social=0,I_media=0.5): #DEPRECIATED FUNCTION 28 MAY
         """"
@@ -448,6 +486,32 @@ class ResidentialArea():
         
     def __str__(self): #this is what you see if you say "print(object)" #readable
         return self.__dict__
+
+def discount_risk(EAD,discount=0.03,horizon=80):
+    """
+    Calculated discounted flood risk for a time series of expected annual damage
+    
+    Arguments:
+        *EAD* (list of floats) : the EAD to discount over
+        *r* (float) : discount factor per year
+        *horizon* (int) : time horizon to discount over
+        
+    Returns:
+        *Risk_discounted* (float) : discounted risk in t=0
+    
+    """
+    if horizon > len(EAD): #the requested horizon is longer than the available EADs
+        raise ValueError("The requested time horizon {} is longer than amount of available EADs {}".format(horizon,len(EAD)))
+    
+    selected_EAD = EAD[0:horizon]
+    timesteps = list(range(0,horizon))
+    df_t = [1 / (1+discount)**t for t in timesteps] #calculate discount factor per timestep
+    npvs = [None] * len(timesteps)
+    for t in range(len(timesteps)):
+        npvs[t] = EAD[t] * df_t[t]
+    
+    return sum(npvs)
+
 
 class Bayesian_pars():
     """
