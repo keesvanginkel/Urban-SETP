@@ -187,28 +187,54 @@ def combine_SurgeLevel(SLR_Scenario,SurgeHeight):
     name = SLR_Scenario.name + "__" + SurgeHeight.name
     instance = SurgeLevel(name=name) #Create new instance of object
     instance.from_combination(SLR_Scenario,SurgeHeight) #derive data from combining both sources
-        
-    #def to_csv(self,filename):
-    #    "Write to a csv file (weakness: does not save the metadata yet)"
-    #    zipped = list(zip(self.years,self.surgelevel)) #zip the two lists
-    #    with open(os.path.join("SurgeSeries",filename), "w",newline='') as f:
-    #        writer = csv.writer(f)
-    #        for row in zipped:
-    #            writer.writerow(row)
-    
-    #def from_csv(self,filename):
-    #    filename = os.path.join("SurgeSeries",filename)
-    #    years = []
-    #    surgelevel = []
-    #    with open(filename) as f:
-    #        reader = csv.reader(f)
-    #        for row in reader:
-    #            years.append(row[0])
-    #            surgelevel.append(row[1])
-    #    self.years = [int(i) for i in years]
-    #    self.surgelevel = [float(i) for i in surgelevel] #convert strings to floats
-        
+    return instance
 
+def generate_SurgeLevel_transient(RCP,collapse,PDF,transient):
+    """
+    Generate a SurgeLevel timeseries (=SLR + SurgeHeight)
+    
+    Arguments:
+        *RCP* (string) : Representative Concentration Pathway e.g. 'RCP26'
+        *collapse* (boolean) : Account for collapse of icesheets (i.e. use Bamber)
+        *PDF* (int) : Percentage indicating the likelihood from the probability density function (e.g. 17)
+        *transient* (int) : Integer indicating which transient scenario to use
+        
+    Returns:
+        *SurgeLevel* (SurgeLevel object) : has time, surgelevel per time and some metadata
+    """
+    if collapse: 
+        SLR_source = "Bamber_2019"
+        RCP = "high" #this is weird, but works for now
+    else:
+        SLR_source = "SROCC_2019" 
+    
+    #READ THE SLR INFO
+    SLR_folder = "SLR_projections" ###TODO CHANGE WITH CONFIG
+    SLR_name = "{}_{}_{}".format(SLR_source,RCP,PDF)
+    SLR_path = os.path.join(SLR_folder,SLR_name+'.csv')
+    
+    if not os.path.exists(SLR_path):
+        print("SLR path : {} does NOT EXIST".format(SLR_path)) #throw an error!
+        return None
+    
+    SLR_obj = SLR_Scenario(SLR_name) #Create instance of object
+    SLR_obj.from_csv(SLR_path)
+    
+    #READ THE TRANSIENT SCENARIO
+    SH_folder = "SurgeHeight" ###TODO READ FROM CONFIG
+    SH_name = str(transient)
+    SH_path = os.path.join(SH_folder,SH_name+'.csv')
+    
+    if not os.path.exists(SH_path):
+        print("SH path : {} does NOT EXIST".format(SH_path)) #throw an error!
+        return None
+    
+    SH_obj = SurgeHeight(SH_name)
+    SH_obj.from_csv(SH_path)
+    
+    SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj)
+
+    return SurgeLevel
 
 class FloodProtection:
     """

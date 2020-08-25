@@ -1,4 +1,4 @@
-# Copied from Rotterdam.ipynb, verison 21/8/2020
+# Copied from Rotterdam.ipynb, version 21/8/2020, update 24/8
 
 from classes import *
 import copy
@@ -13,12 +13,17 @@ import os
 import pickle
 
 
-def run_model_workbench(SurgeLevel,Mayor,do_print=False):  
+def run_model_workbench(RCP,collapse,PDF,transient,Mayor,do_print=False):  
+    
+    #IMPORT MODEL
     from models import Rotty
     #global pars (for the development of Trust) Will be removed 
     k = 0.2 
     T_eq = 70
     Model = Rotty
+    
+    #IMPORT SURGELEVEL
+    SurgeLevel = generate_SurgeLevel_transient(RCP,collapse,PDF,transient)
     
     #REMOVE ALL ACTIVE MEASURES FROM PREVIOUS RUNS
     allactiveMeasure.clear()
