@@ -1,6 +1,8 @@
 import csv
+import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pandas as pd
 from abc import ABC, abstractmethod
 from math import log, exp
 from copy import deepcopy
@@ -27,6 +29,29 @@ class Experiment():
     
     def __repr__(self):
         return self.name + " " + self.time.strftime("%Y/%m/%d, %H:%M:%S")
+    
+    def create_Metrics(self):
+        """
+        Output metrics of interest
+        In this version: the house prices
+        
+        Arguments:
+            *metrics* (list) : list items contain all output parameters which are considered model metrics
+        
+        Returns:
+            *df* (DataFrame) : Contains output metrics of interest, index=years
+        """
+        allMetrics = [] #List tracking all experiment metrics
+        for RA in self.Model.allResidentialArea: #BETTER, ITEMS TO LOOP OVER OUTSIDE THE METHOD!
+            allMetrics.append(Metric(data=RA.house_price_t_objective,
+                                     index=self.SurgeLevel.years,
+                                     name="{}_house_price_obj".format(RA.name)
+                                     ))
+            allMetrics.append(Metric(data=RA.house_price_t_subjective,
+                                     index=self.SurgeLevel.years,
+                                     name="{}_house_price_subj".format(RA.name)))     
+        self.allMetrics = allMetrics
+        return 
         
 class Model():
     def __init__(self,name):
@@ -710,3 +735,128 @@ def risk_FP(dam,RPs,PL):
     Rfs.insert(0,0) #add the probability of the 1:inf event
     integral = np.trapz(y=dam,x=Rfs).round(2)
     return integral
+
+class Metric():
+    """
+    Indicates which model outcome parameters should be considered model metrics
+    """
+    
+    def __init__(self,index,data,name=None):
+        """The raw indicator data, describes the development of the metric over time"""
+        series = pd.Series(name=name,data=data,index=index)
+        df = series.to_frame() #function below only works for dfs #TODO: is possibly also possible with series
+        df[df<0] = 0 #Dirty work-around: avoid values below zero TODO.
+        series = df.squeeze()
+        self.raw = series
+        self.name = name
+    
+    def __repr__(self):
+        return "{}".format(self.name)
+    
+    def create_statistics(self,window=4,lag=1,domain='All'):
+        """
+        Create statistics for Panda Series, used for tipping point analysis
+        Rolling window: result is set to the right edge of the window
+        if Cut = true: don't show rows containing al NaNs
+        
+        Arguments:
+            *self.statistics* (Dataframe) : columns are series with an output metric of interest
+            *window* (int) : Width of the rolling window (in model timesteps)
+            *lag* : unused
+            *domain* (tuple) : tuple indicating the beginning and end year to include in the statistic
+            
+        Returns:
+            *self.Statistics* (DataFrame) : 
+        """
+        #Construct empty df to store results
+        series = self.raw
+        df = pd.DataFrame(index=series.index,data=series)
+        
+        #Calculate derivates of raw time series
+        df["{}".format("First order derivative (dM/dt)")] = series.to_frame().diff()
+        df["{}".format("Second order derivative (d2M/dt2)")] = series.to_frame().diff().diff()
+            #df["{} __ {}".format(series.name,"Autocorrelation lag {}".format(lag))] = series.autocorr(lag=lag)
+
+        #Calculate statistics using a rolling window
+        rolling = series.rolling(window=window)
+        df["{}".format("Window mean")] = rolling.mean()
+        df["{}".format("Window variance")] = rolling.var()
+            #df["{} __ {}".format(series.name,"Window rolling correlation")] = rolling.apply(lambda x: x.autocorr(), raw=False)
+
+        if not domain == 'All':
+            df = df.loc[domain[0]:domain[1]]
+        
+        self.statistics = df
+        return df
+    
+    
+    def plot_statistics(self,figsize=(20,10),save=False):
+        statistics = self.statistics
+        fig,ax = plt.subplots(nrows=len(statistics.columns),ncols=1,figsize=figsize,sharex=True)
+        for i, col in enumerate(list(statistics.columns)):
+            statistics[col].plot(ax=ax[i],title=col)
+        fig.suptitle('{}'.format(statistics.columns[0]))
+        if save:
+            fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format("exp_name",statistics.columns[0],dpi=150)))
+    
+    def select_candidates(self,c1=0.2e10,c2=10e3,c3=10,window=5,margin=2):
+        """
+        Select tipping point candidates based on three criteria
+
+        Arguments:
+            *self.statistics* (DataFrame) : output of examine_series
+            *c1* (float) : absolute valued threshold for variance: detect stable states
+            *c2* (float) : absolute change in change of metric: detect rapid change
+            *c3* (float) : percentage of change between states: substantially different states
+
+        Returns:
+            *df* (DataFrame) : indicating in which years the criteria are met
+
+        """
+        statistics = self.statistics
+        ind = statistics.index
+        df = pd.DataFrame(index=ind)
+
+        #Criterion 1: check if variance is above threshold to detect stable states
+        c1 = 0.2e10 #absolute value of variance
+        df["unstable states"] = pd.Series(index=ind,data=[1]*len(ind))[statistics["Window variance"] > c1]
+
+        #Criterion 2: check for rapid change
+        #c2 = 5 #percentage of change per timestep considered 'rapid'
+        c2 = 10e3 # absolute house-price change per timestep considered 'rapid'
+        df["rapid change"] = pd.Series(index=ind,data=[2]*len(ind))[(statistics["First order derivative (dM/dt)"] < -c2)]
+        c2met = list(df[df["rapid change"].notnull()].index) #list of years in which c2 is met
+
+        #Criterion 3: check if states on both sides of threshold are different
+        c3 = 10 #percentage of change that states before and after should be different
+        c3met = []
+        for y in c2met:
+            avg_b,avg_a = average_before_after(statistics.iloc[:,0],y,window=window,margin=margin)
+            perc = 100*(avg_a-avg_b)/avg_a
+            if (perc < -1*c3) or (perc > c3) :
+                c3met.append(y)
+        df["substantial different states"] = pd.Series(index=c3met,data=[3]*len(c3met))
+        self.candidates = df
+    
+        return df
+    
+    def plot_both(self,figsize=(15,20),save=False,output_path=None,exp_name=None):
+        """
+        Plot metric statistics and candidate tipping points
+        """
+        statistics = self.statistics
+        candidates = self.candidates
+        nrows = len(statistics.columns)+1
+        fig,ax = plt.subplots(nrows=nrows,ncols=1,figsize=figsize,sharex=True)
+        for i, col in enumerate(list(statistics.columns)):
+            statistics[col].plot(ax=ax[i],title=col)
+        fig.suptitle('{}'.format(statistics.columns[0]))
+        candidates.plot(ax=ax[nrows-1],title='SETP candidates by criterion',style='o')
+        if save:
+            fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format(exp_name,statistics.columns[0]),dpi=150,bbox_inches='tight'))
+        
+
+def average_before_after(data,year,window=5,margin=2):
+    before = data.loc[year-margin-window:year-margin].mean()
+    after = data.loc[year+margin:year+margin+window].mean()
+    return(before,after)
