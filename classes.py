@@ -164,8 +164,20 @@ class SLR_Scenario:
     def __str__(self):
         return self.name
     
-def SLR_Scenario_from_pickles():
-    pass
+def SLR_Scenario_from_pickles(folder,empty=True):
+    """
+    Load all SLR_Scenario pickles from a certain folder,
+    while emptying any existing scenarios already added to the folder (optional)
+    """
+    
+    if empty:
+        allSLR_Scenario = []
+    
+    for filename in os.listdir(folder):
+        if filename.endswith(".pkl"):
+            with open(os.path.join(folder,filename),'rb') as f:
+                allSLR_Scenario.append(pickle.load(f))
+    return allSLR_Scenario #TODO HERE SOMETHING GOES WRONG WITH GLOBALS 
     
 class SurgeHeight:
     """

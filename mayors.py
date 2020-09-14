@@ -15,9 +15,9 @@ from classes import *
 
 #SOME MEASURES THAT MANY MAYORS WILL USE
 small = Measure_FloodProtection("Minor Dike Heightening", 7, 0.5)
-large = Measure_FloodProtection("Major Dike Heightening", 10, 1) #was 12
+large = Measure_FloodProtection("Major Dike Heightening", 10, 1)
 
-class Kroket(Mayor):
+class Reactive(Mayor):
     """
     Reactive management strategy:
     In case of near miss: implements a Small dike heightening
@@ -30,8 +30,6 @@ class Kroket(Mayor):
     def get_full_name(self):
         return('mr. Ree Active')
     
-    def get_nick_name(self):
-        return('Berry Kroket')
     
     def apply_strategy(self,Model,SurgeLevel,i,time):
         
