@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import pickle
 from abc import ABC, abstractmethod
 from math import log, exp
 from copy import deepcopy
@@ -10,7 +11,10 @@ from datetime import datetime
 
 
 #TRACK THE OBJECTS THAT WERE INITIATED
-allSurgeSeries = []   
+allSurgeSeries = []
+allSLR_Scenario = []
+allSurgeHeight = []
+allSurgeLevel = []
 
 class Experiment():
     """An experiment object is a unique combination of (1) one model (a city), 
@@ -99,13 +103,7 @@ class Mayor(ABC): #is subclass of ABC (abstract base class)
     
     def __str__(self): #this is what you see if you say "print(object)" #readable
         return self.get_name()
-        
 
-
-
-allSLR_Scenario = []
-allSurgeHeight = []
-allSurgeLevel = []
 
 class SLR_Scenario:
     """
@@ -114,9 +112,12 @@ class SLR_Scenario:
     
     #TODO: add that it remembers the RCP?
     """
-    def __init__(self,name):
+    def __init__(self,name,years=None,sealevel=None,description=None):
         allSLR_Scenario.append(self)
         self.name = name
+        self.years = years
+        self.sealevel = sealevel
+        self.description = description
 
     def from_csv(self,filepath):
         """Add data from SLR trendseries from a csv file
@@ -135,11 +136,36 @@ class SLR_Scenario:
         self.years = [int(i) for i in years]
         self.sealevel = [float(i) for i in sealevel] #convert strings to floats
         
+    def plot(self):
+        df = pd.DataFrame(self.sealevel,index=self.years)
+        return df.plot()
+    
+    def to_pickle(self,folder,filename=None):
+        """
+        Save SLR_Scenario object as a pickle
+        
+        Arguments:
+            *self* (SLR_Scenario) : The SLR_Scenario object
+            *folder* (string) : Path to destination folder
+            *filename* (string) : Filename (optional, defaults to self.name.pkl)
+        """
+        if filename == None:
+            filename = self.name + ".pkl"
+        
+        with open(os.path.join(folder,filename),'wb') as f:
+            pickle.dump(self,f)
+        
+        
+        
+    
     def __repr__(self):
         return self.name +  "\n" + str(list(zip(self.years,self.sealevel)))
     
     def __str__(self):
         return self.name
+    
+def SLR_Scenario_from_pickles():
+    pass
     
 class SurgeHeight:
     """
@@ -753,7 +779,7 @@ class Metric():
     def __repr__(self):
         return "{}".format(self.name)
     
-    def create_statistics(self,window=4,lag=1,domain='All'):
+    def create_statistics(self,window=5,lag=1,domain='All'):
         """
         Create statistics for Panda Series, used for tipping point analysis
         Rolling window: result is set to the right edge of the window
@@ -799,15 +825,17 @@ class Metric():
         if save:
             fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format("exp_name",statistics.columns[0],dpi=150)))
     
-    def select_candidates(self,c1=0.2e10,c2=10e3,c3=10,window=5,margin=2):
+    def select_candidates(self,c1=10e3,c2=0.2e10,c3=10,window=5,margin=2):
         """
         Select tipping point candidates based on three criteria
 
         Arguments:
             *self.statistics* (DataFrame) : output of examine_series
-            *c1* (float) : absolute valued threshold for variance: detect stable states
-            *c2* (float) : absolute change in change of metric: detect rapid change
+            *c1* (float) : absolute change in change of metric: detect rapid change
+            *c2* (float) : absolute valued threshold for variance: detect stable states
             *c3* (float) : percentage of change between states: substantially different states
+            *window* (int) : window size for functionality using a moving window
+            *margin* (int) : margin around TP for assessing stable states
 
         Returns:
             *df* (DataFrame) : indicating in which years the criteria are met
@@ -817,20 +845,24 @@ class Metric():
         ind = statistics.index
         df = pd.DataFrame(index=ind)
 
-        #Criterion 1: check if variance is above threshold to detect stable states
-        c1 = 0.2e10 #absolute value of variance
-        df["unstable states"] = pd.Series(index=ind,data=[1]*len(ind))[statistics["Window variance"] > c1]
-
-        #Criterion 2: check for rapid change
-        #c2 = 5 #percentage of change per timestep considered 'rapid'
-        c2 = 10e3 # absolute house-price change per timestep considered 'rapid'
-        df["rapid change"] = pd.Series(index=ind,data=[2]*len(ind))[(statistics["First order derivative (dM/dt)"] < -c2)]
-        c2met = list(df[df["rapid change"].notnull()].index) #list of years in which c2 is met
+        #Criterion 1: check for rapid change
+        #c1 = 5 #percentage of change per timestep considered 'rapid'
+        #c1 = 10e3 # absolute house-price change per timestep considered 'rapid'
+        df["rapid change"] = pd.Series(index=ind,data=[1]*len(ind))[(statistics["First order derivative (dM/dt)"] < -c1)]
+        c1met = list(df[df["rapid change"].notnull()].index) #list of years in which c2 is met
+        
+        
+        #Criterion 2: check if variance is above threshold to detect stable states
+        #c2 = 0.2e10 #absolute value of variance
+        df["stable"] = pd.Series(index=ind,data=[2]*len(ind))[statistics["Window variance"] < c2]
+        df["stable_before"] = pd.Series(index=ind,data=[1.8]*len(ind))[statistics["Window variance"].shift(periods=margin) < c2] #
+        df["stable_after"] = pd.Series(index=ind,data=[2.2]*len(ind))[statistics["Window variance"].shift(periods=-margin-window) < c2] #
+        
 
         #Criterion 3: check if states on both sides of threshold are different
-        c3 = 10 #percentage of change that states before and after should be different
+        #c3 = 10 #percentage of change that states before and after should be different
         c3met = []
-        for y in c2met:
+        for y in c1met:
             avg_b,avg_a = average_before_after(statistics.iloc[:,0],y,window=window,margin=margin)
             perc = 100*(avg_a-avg_b)/avg_a
             if (perc < -1*c3) or (perc > c3) :
@@ -850,7 +882,7 @@ class Metric():
         fig,ax = plt.subplots(nrows=nrows,ncols=1,figsize=figsize,sharex=True)
         for i, col in enumerate(list(statistics.columns)):
             statistics[col].plot(ax=ax[i],title=col)
-        fig.suptitle('{}'.format(statistics.columns[0]))
+        fig.suptitle('{}_{}'.format(exp_name,statistics.columns[0]))
         candidates.plot(ax=ax[nrows-1],title='SETP candidates by criterion',style='o')
         if save:
             fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format(exp_name,statistics.columns[0]),dpi=150,bbox_inches='tight'))
