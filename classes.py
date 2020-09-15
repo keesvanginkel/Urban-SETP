@@ -9,6 +9,8 @@ from math import log, exp
 from copy import deepcopy
 from datetime import datetime
 
+from pdb import set_trace
+
 
 #TRACK THE OBJECTS THAT WERE INITIATED
 allSurgeSeries = []
@@ -350,6 +352,7 @@ class ResidentialArea():
         self.trust_t = [float("NaN")] * len(time)
         self.trust_t[0] = trust_0 #set initial condition
         self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
+        self.event_history = [""] * len(time) #NEW, BECAUSE THE REST WILL BE DISCARDED!
         self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
         self.nearmiss_history = [float("NaN")] * len(time) #SAVE THE DIFFERENCE BETWEEN THE DIKE HEIGHT AND PROTECTION LEVEL IN CASE OF NEAR MISS [0, 0.5]
         self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
@@ -376,17 +379,7 @@ class ResidentialArea():
             for j in self.protected_by: #Iterate over the structures the area is protected by (for now only one! -> later expand and make decision rules if multiple exist)
                 if i.name == j:
                     self.protection_level = i.protection_level
-    
-    def init_Bayesian(self,Bayesian_pars):
-        """
-        Add the weighting factors of the Bayesian weighting to to the residential area
         
-        Arguments:
-            *self* (ResidentialArea) : The residential area with all it's properties
-            *Bayesian_pars* (Bayesian_pars) : Object containing Bayesian weighting parameters 
-        """
-        pass
-    
     def residential_capital(self):
         print(self.name + ": \u20ac" + str(self.nr_houses*self.house_price_0) + " _____ " + str(round(self.nr_houses*self.house_price_0*10**(-6))) + "mln \u20ac" )
   
@@ -447,51 +440,9 @@ class ResidentialArea():
                     #print('Flood proofing active in timestep {}'.format(timestep))
                     damage = damage * 0.3 #70% reduction of damage  
         return damage
-    
-    def weigh_RP_Bayesian_old(self,time,Bayesian_pars,I_exp_interp,I_social=0,I_media=0.5): #DEPRECIATED FUNCTION 28 MAY
-        """"
-        Apply Bayesian learning to the Risk Perception
-        This varies between 0 () and 1
-        Adapted from Haer et al. (2017) citing Viscusi (1985,1989)
+      
         
-        Input:
-            *time* (int) : timestep of the model
-            *Bayesian_pars* (dict) : Weighting factors a,b,c,d for the Bayesian updating
-            *I_exp_max* (float) : Water depth at which the maximum experience occurs
-            *I_social* (float) : Impact of neighbours (if any)
-            *I_media* (float) : Impact of media (if any)
-            
-        Returns:
-            *self.risk_perception(time)* (float) : The risk perception in the current timestep
-        """
-        #Unpack the Bayesian weighing pars assigned to the model
-        if self.flood_history[time] > 0: #in case of a flood
-            b = Bayesian_pars["b_flood"]
-            a = Bayesian_pars["a_flood"] * b
-            
-            #Calculate the magnitude of the flood experience
-            depth = self.flood_history[time]  #water depth
-            
-            #unpack values to enable the linear interpolation
-            xp = I_exp_interp['xp']
-            fp = I_exp_interp['fp']
-            #linear interpolation of I_exp
-            I_exp = np.interp(depth,xp,fp,left=0,right=1)
-        
-        else:
-            a = Bayesian_pars["a_noflood"] #no flood
-            b = Bayesian_pars["b_noflood"]
-            I_exp = 0
-        
-        c = Bayesian_pars["c"]
-        d = Bayesian_pars["d"]
-           
-        #Function should not be applied in the first timestep t=0, use initial condition instead in this timestep
-        self.risk_perception[time] = (
-        a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
-        a + b + c + d)    
-        
-    def weigh_RP_Bayesian(self,time,I_exp_interp,I_social=0.5,I_media=0.5):
+    def weigh_RP_Bayesian(self,time,I_exp_interp,I_social):
         """"
         Apply Bayesian learning to the Risk Perception
         This varies between 0 () and 1
@@ -500,8 +451,7 @@ class ResidentialArea():
         Input:
             *time* (int) : timestep of the model
             *I_exp_max* (float) : Water depth at which the maximum experience occurs [currently unused but hardcoded]
-            *I_social* (float) : Impact of neighbours (if any)
-            *I_media* (float) : Impact of media (if any)
+            *I_social* (float) : Impact of neighbouring residential areas through media
             
         Returns:
             *self.risk_perception(time)* (float) : The risk perception in the current timestep
@@ -510,12 +460,13 @@ class ResidentialArea():
         depth = self.flood_history[time]  #water depth
         nearmiss = self.nearmiss_history[time]
         
+        #set_trace()
+        
         if depth > 0: #IN CASE OF A FLOOD
             #print('timestep: {}, region: {}, FLOOD!'.format(time,self.name))
             a = self.Bayesian_pars.a[2] 
             b = self.Bayesian_pars.b[2] 
             c = self.Bayesian_pars.c[2] 
-            d = self.Bayesian_pars.d[2]
             #unpack values to enable the linear interpolation
             #TODO: CHANGE THE I_exp_interp(...)
             #xp = I_exp_interp['xp'] 
@@ -529,20 +480,18 @@ class ResidentialArea():
                 a = self.Bayesian_pars.a[1] #Select the first weighting factor ...
                 b = self.Bayesian_pars.b[1] #... from the list of weighting factors ...
                 c = self.Bayesian_pars.c[1] #... (see docstring of Bayesian_pars class)
-                d = self.Bayesian_pars.d[1]
                 I_exp = np.interp(nearmiss,[0,0.5],[1,0],left=1,right=0)
             else: #IN CASE OF A NO FLOOD NOR A NEAR MISS
                 #print('timestep: {}, region {}, NOTHING'.format(time,self.name))
                 a = self.Bayesian_pars.a[0] #Select the first weighting factor ...
                 b = self.Bayesian_pars.b[0] #... from the list of weighting factors ...
                 c = self.Bayesian_pars.c[0] #... (see docstring of Bayesian_pars class)
-                d = self.Bayesian_pars.d[0]
                 I_exp = 0 #does not impact the calculation, but needs to be defined #TODO NO HARDCODING      
-           
+        #set_trace()   
         #Function should not be applied in the first timestep t=0, use initial condition instead in this timestep
         self.risk_perception[time] = (
-        a * self.risk_perception[time-1] + b * I_exp + c * I_social + d * I_media) / (
-        a + b + c + d)  
+        a * self.risk_perception[time-1] + b * I_exp + c * I_social) / (
+        a + b + c)  
         
     def __repr__(self): #this is wat you see if you say "object" (without printing)
         return self.name + " Elevation: " + str(self.elevation) + "\n Protected by: " + str(self.protected_by)
@@ -582,11 +531,11 @@ class Bayesian_pars():
 
     Expects to use the following equation for Bayesian weighting: (Haer et al., 2017)
     
-                 [a*RP_t + b*I_experience + c*I_media + d*I_neighbours] 
+                 [a*RP_t + b*I_experience + c*I_media/neighbours ] 
     RP_t+1 =    --------------------------------------------------------
-                                  [a + b + c + d]
+                                  [a + b + c]
     
-    Convention for arguments a-d
+    Convention for arguments a-c
     if list of length 1: this weighting factor always applies
     if list of length 2: list[0] = no flood; list[1] = flood
     if list of length 3: list[0] = no flood; list[1] = near miss; list[2] = flood
@@ -594,15 +543,13 @@ class Bayesian_pars():
     Arguments:
         *a* (list of floats) : weighting factor for risk perception in the previous timestep
         *b* (list of floats) : weighting factor for flood experience in the current timestep
-        *c* (list of floats) : weighting factor for impact of the media/science/other external influence
-        *d* (list of floats) : weighting factor for experience in other regions
+        *c* (list of floats) : weighting factor for impact of the media/science/other external influence (in our case from other regions)
     
     """
-    def __init__(self,a,b,c,d):
+    def __init__(self,a,b,c):
         self.a = a
         self.b = b
         self.c = c
-        self.d = d
     
 allactiveMeasure = []
 

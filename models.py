@@ -22,9 +22,18 @@ dam_frac = [0,0.25,0.4,0.5,0.6,0.75,0.85,0.95,1.00] #damage fraction (-)
 dam_pars= (MaxDamage_Residential['Land-use_based'],depth,dam_frac) #all parameters for the damage assessment
 dam_pars_household = (MaxDamage_Residential['Object_based'],depth,dam_frac)
 
+
+
+
+
+
 ##########################################################
 ####                  MODEL COLLECTION                ####
 ##########################################################
+
+
+
+
 
 
 # .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
@@ -38,6 +47,11 @@ dam_pars_household = (MaxDamage_Residential['Object_based'],depth,dam_frac)
 #| |              | || |              | || |              | || |              | || |              | |
 #| '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
 # '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
+
+
+
+
+
 
 
 #### MODEL ROTTY FIRST VERSION ####
@@ -75,14 +89,13 @@ Rotty.add_FloodProtection(FloodProtection("Dike",4.5,False,"Sea dike"))
 Rotty.allResidentialArea[0].Bayesian_pars = Bayesian_pars( #Heijplaat
     a=[1,1,0.1], #NO FLOOD, NEAR MISS, FLOOD (in Heijplaat, Near miss is handled as no flood!)
     b=[0.04,0.04,1], #Experience in current timestep
-    c=[0,0,0], #Social interactions (from other neighbourhoods)
-    d=[0,0,0]) #Media/science
+    c=[0,0,0]) #Social interactions through media
+
 
 Rotty.allResidentialArea[1].Bayesian_pars = Bayesian_pars( #City Centre
     a=[1,0.1,0.1], #NO FLOOD, NEAR MISS, FLOOD
     b=[0.04,0.5,1], #Experience in current timestep
-    c=[0.04,0.2,0.1], #Social interactions (from other neighbourhoods) 
-    d=[0,0,0]) #Media/science
+    c=[0.02,0.4,0] ) #Social interactions (from other neighbourhoods) #old: [0.04,0.2,0.1]
 
 #SET MODEL PARAMETERS
 Rotty.add_Parameter("alarming_conditions",
@@ -99,17 +112,10 @@ Rotty.add_Parameter("Gumbel", #From Sterl et al. 2009
               "mu"   : 2.33,
               "beta" : 0.234}))
 
-Rotty.add_Parameter("Bayesian_weighing_constants",   #Adapted from Haer et al. (2017)        
-        OrderedDict({ #a is the weighting of the previous timestep for the new risk perception
-            "a_noflood" : 1,    #previous timestep weighs heavily if no flood occurs
-            "a_flood"   : 0.1,  #times b !!! previous timestep weighs little in case of flood
-            "b_noflood" : 0.04, #flood experience in current timestep
-            "b_flood"   : 1,    #weighs heavily in case of a flood
-            "c"         : 0,    #neighbours (other agents)
-            "d"         : 0.2 })) #media
-
-
 #Haer et al, 2017, p1982
 Rotty.add_Parameter("I_experience_interp", #Used for linear interp of the experience(Haer et al., 2017)
         {"xp" : [0,0.5], #water depth
-         "fp" : [0,1]}) 
+         "fp" : [0,1]})
+
+Rotty.add_Parameter("I_social", #Indicate how heavily the experience from other RA's weights
+        1) #The extent to which the experience on the Heijplaat impacts the exp on the CC.
