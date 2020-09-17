@@ -254,7 +254,40 @@ def combine_SurgeLevel(SLR_Scenario,SurgeHeight):
     instance.from_combination(SLR_Scenario,SurgeHeight) #derive data from combining both sources
     return instance
 
-def generate_SurgeLevel_transient(RCP,collapse,PDF,transient):
+def generate_SurgeLevel_new(SLR,transient):
+    """
+    Generate a Sugelevel timeseries (=SLR + SurgeHeight)
+    
+    Arguments:
+        *SLR* (string) : 'Transient' sea level rise scenario e.g. '01'
+        *transient* (int) : Transient storm surge series
+    
+    Returns:
+        *SurgeLevel* (SurgeLevel object) : has time, surgelevel per time and some metadata
+    """
+    #load all SLR scenarios available as pickles
+    allSLR_Scenario = SLR_Scenario_from_pickles(os.path.join("SLR_projections","Transients"))
+    #and select the right one
+    SLR_obj = [x for x in allSLR_Scenario if x.name.split('__')[0].split('_')[1] == SLR][0]
+
+    #READ THE TRANSIENT SURGEHEIGHT SCENARIO
+    SH_folder = "SurgeHeight" ###TODO READ FROM CONFIG
+    SH_name = str(transient)
+    SH_path = os.path.join(SH_folder,SH_name+'.csv')
+    
+    if not os.path.exists(SH_path):
+        print("SH path : {} does NOT EXIST".format(SH_path)) #throw an error!
+        return None
+    
+    SH_obj = SurgeHeight(SH_name)
+    SH_obj.from_csv(SH_path)
+    
+    SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj)    
+    
+    return SurgeLevel
+    
+    
+def generate_SurgeLevel_transient(RCP,collapse,PDF,transient): #DEPRECIATED
     """
     Generate a SurgeLevel timeseries (=SLR + SurgeHeight)
     

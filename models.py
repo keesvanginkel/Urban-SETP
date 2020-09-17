@@ -60,11 +60,11 @@ Rotty = Model('Rotty') #Initiate the model class
 #Add residential areas to the model
 Rotty.add_ResidentialArea(ResidentialArea(
     name="Area_A",
-    elevation=3,
-    surface_area=0.4,
+    elevation=3, # [m]
+    surface_area=0.4, # [km^2]
     inhabitants = 1500,
     nr_houses = 750,
-    house_price_0 = 300e3,
+    house_price_0 = 300e3, # euro, pricelevel of t=0
     dam_pars = dam_pars, #TODO: dit is een beetje omslachtig, beter gewoon in 1 dict meegeven 
     dam_pars_household = dam_pars_household,
     protected_by = ["No"],
@@ -95,7 +95,7 @@ Rotty.allResidentialArea[0].Bayesian_pars = Bayesian_pars( #Heijplaat
 Rotty.allResidentialArea[1].Bayesian_pars = Bayesian_pars( #City Centre
     a=[1,0.1,0.1], #NO FLOOD, NEAR MISS, FLOOD
     b=[0.04,0.5,1], #Experience in current timestep
-    c=[0.02,0.4,0] ) #Social interactions (from other neighbourhoods) #old: [0.04,0.2,0.1]
+    c=[0.02,0.4,0] ) #Social interactions (from other neighbourhoods)
 
 #SET MODEL PARAMETERS
 Rotty.add_Parameter("alarming_conditions",
