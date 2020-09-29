@@ -19,3 +19,4 @@ dependencies:
   - seaborn
   - nodejs
   - git-bash
+  - ruptures

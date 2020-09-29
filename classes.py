@@ -808,8 +808,9 @@ class Metric():
         return df
     
     
-    def plot_statistics(self,figsize=(20,10),save=False):
+    def plot_statistics(self,figsize=(20,10),drop=None,save=False):
         statistics = self.statistics
+        statisctics = statistics.drop(drop,axis=1)
         fig,ax = plt.subplots(nrows=len(statistics.columns),ncols=1,figsize=figsize,sharex=True)
         for i, col in enumerate(list(statistics.columns)):
             statistics[col].plot(ax=ax[i],title=col)
@@ -864,11 +865,12 @@ class Metric():
     
         return df
     
-    def plot_both(self,figsize=(15,20),save=False,output_path=None,exp_name=None):
+    def plot_both(self,figsize=(15,20),save=False,output_path=None,drop=None,exp_name=None):
         """
         Plot metric statistics and candidate tipping points
         """
         statistics = self.statistics
+        statistics = statistics.drop(drop,axis=1)
         candidates = self.candidates
         nrows = len(statistics.columns)+1
         fig,ax = plt.subplots(nrows=nrows,ncols=1,figsize=figsize,sharex=True)
