@@ -76,14 +76,23 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
             beta = Model.Parameters["Gumbel"]["beta"]
             SLR = SurgeLevel.corresponding_SLR_Scenario.sealevel[i] #the degree of SLR in this timestep
             max_surge = RA.protection_level[i]-SLR #the maximum storm surge height this dike can cope with
-            RA.protection_level_rp[i] = Gumbel_RP(max_surge,mu,beta) #Return period of the flood protection level
+            RA.protection_level_rp[i] = Gumbel_RP(max_surge,mu,beta) #Return period of the flood protection height
             RPs = [10000,5000,2000,1000,500,200,100,50,20,10,5,2]
             damages = [] #per neighborhood
             damages_household = []
             for RP in RPs:
                 #Expected water levels are the sum of the Gumbel distributed WLs 
                 waterlevel = Gumbel_inverse(RP,mu,beta) + SLR
-                inundation = waterlevel - RA.elevation
+                
+                #Impose volume constraint
+                overtopping = waterlevel - RA.protection_level[i]
+                if overtopping < RA.volume_constraint_threshold: #constrain volume if overtopping < threshold
+                      volume_attenuation_factor = overtopping / RA.volume_constraint_threshold
+                else: volume_attenuation_factor = 1
+                
+                #Constrain the volume upon inundation
+                inundation = (waterlevel - RA.elevation) * volume_attenuation_factor
+                
                 #Calculation per residential area
                 damages.append(RA.calculate_damage(inundation,i)) #damage assuming no FPL
                 
@@ -92,8 +101,7 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
                     
             RA.risk[i] = risk_FP(damages.copy(),RPs.copy(),RA.protection_level_rp[i])*10**(-6) #EAD of Residential area in million 2010-euro's 
             RA.risk_household[i] = risk_FP(damages_household.copy(), RPs.copy(),RA.protection_level_rp[i]) #EAD [per household] in 2010-euros
-            #TODO: ADD ANTICIPATE ON FUTURE SEA LEVEL RISE
-            #Risk discounting: for now assume that households don't anticipate any sea level rise
+
             if time_remaining > RA.house_price_horizon:
                 future_EADs = [RA.risk_household[i]] * RA.house_price_horizon #assume that all future damages equal current EAD
                 RA.risk_household_discounted[i] = discount_risk(future_EADs,RA.r,RA.house_price_horizon)
