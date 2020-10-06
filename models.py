@@ -91,11 +91,17 @@ Rotty.allResidentialArea[0].Bayesian_pars = Bayesian_pars( #Heijplaat
     b=[0.04,0.04,1], #Experience in current timestep
     c=[0,0,0]) #Social interactions through media
 
-
 Rotty.allResidentialArea[1].Bayesian_pars = Bayesian_pars( #City Centre
     a=[1,0.1,0.1], #NO FLOOD, NEAR MISS, FLOOD
     b=[0.04,0.5,1], #Experience in current timestep
     c=[0.02,0.4,0] ) #Social interactions (from other neighbourhoods)
+
+#IMPOSE VOLUME CONSTRAINT THRESHOLDS
+#This constrains the inundation volume for small volumes of overtopping.
+#For the indicated value, bath-tub inundation is assummed. For smaller overtopping values,
+#The water depth is linearly interpolated
+Rotty.allResidentialArea[0].volume_constraint_threshold = 0.1 #m
+Rotty.allResidentialArea[1].volume_constraint_threshold = 1 #m
 
 #SET MODEL PARAMETERS
 Rotty.add_Parameter("alarming_conditions",

@@ -33,34 +33,40 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
         #print(i,t, end=" |")
         time_remaining = len(time) - i 
         
-        for Area in Model.allResidentialArea:
+        for RA in Model.allResidentialArea:
             
             #FIRST EVALUATE IF THE FLOOD PROTECTION LEVEL IS EXCEEDED 
-            if Area.protection_level[i] < SurgeLevel.surgelevel[i]: #if a flood occurs; TODO EVALUATE FROM FLOOD_HISTORY
-                Area.flood_history[i] = SurgeLevel.surgelevel[i] - Area.elevation #Can also be negative (no flood!)
+            if RA.protection_level[i] < SurgeLevel.surgelevel[i]: #if a flood occurs
+                overtopping = SurgeLevel.surgelevel[i] - RA.protection_level[i]
+                if overtopping < RA.volume_constraint_threshold: #constrain volume if overtopping < threshold
+                      volume_attenuation_factor = overtopping / RA.volume_constraint_threshold
+                else: volume_attenuation_factor = 1
                 
-                Area.flood_damage[i] = Area.calculate_damage(Area.flood_history[i],i)
+                #water depth upon inundation is constrained by the volume_attenuation_factor
+                RA.flood_history[i] = (SurgeLevel.surgelevel[i] - RA.elevation)*volume_attenuation_factor
+                
+                RA.flood_damage[i] = RA.calculate_damage(RA.flood_history[i],i)
                 #print("Damage is calculated at: {} euro".format(dam))
                 
-                Area.event_history[i] = "~"
+                RA.event_history[i] = "~"
             
             #AND EVALUATE IF ANY NEAR MISS MIGHT HAVE OCCURED
-            if 0 < Area.protection_level[i] - SurgeLevel.surgelevel[i] <= 0.5: #Near miss
-                Area.nearmiss_history[i] = Area.protection_level[i] - SurgeLevel.surgelevel[i]
+            if 0 < RA.protection_level[i] - SurgeLevel.surgelevel[i] <= 0.5: #Near miss
+                RA.nearmiss_history[i] = RA.protection_level[i] - SurgeLevel.surgelevel[i]
                 
-                Area.event_history[i] = "!"
+                RA.event_history[i] = "!"
             
             #THEN EVALUATE THE IMPACT ON TRUST #DEPRECIATED, TO BE REPLACE WITH BAYESIAN STUFF
             if i != 0: #don't evaluate trust in the first timestep!
-                #print(Area.protection_level-levels_t[i])
-                Area.event_impact_history[i] = evaluate_event(SurgeLevel.surgelevel[i]-Area.protection_level[i],
+                #print(RA.protection_level-levels_t[i])
+                RA.event_impact_history[i] = evaluate_event(SurgeLevel.surgelevel[i]-RA.protection_level[i],
                                                               Model.Parameters['alarming_conditions'],False)
                 #First evaluate the impact of this year's event (if any)
-                Area.trust_t[i] = Area.trust_t[i-1] - Area.event_impact_history[i]
+                RA.trust_t[i] = RA.trust_t[i-1] - RA.event_impact_history[i]
 
                 #ALWAYS MODEL RECOVERY OF TRUST
-                dTdt = (Area.trust_t[i]-T_eq)*-k
-                Area.trust_t[i] = Area.trust_t[i] + dTdt
+                dTdt = (RA.trust_t[i]-T_eq)*-k
+                RA.trust_t[i] = RA.trust_t[i] + dTdt
 
         
         for RA in Model.allResidentialArea:
@@ -69,7 +75,7 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
             mu = Model.Parameters["Gumbel"]["mu"]
             beta = Model.Parameters["Gumbel"]["beta"]
             SLR = SurgeLevel.corresponding_SLR_Scenario.sealevel[i] #the degree of SLR in this timestep
-            max_surge = RA.protection_level[i]-SLR #the maximum storm surge level this dike can cope with
+            max_surge = RA.protection_level[i]-SLR #the maximum storm surge height this dike can cope with
             RA.protection_level_rp[i] = Gumbel_RP(max_surge,mu,beta) #Return period of the flood protection level
             RPs = [10000,5000,2000,1000,500,200,100,50,20,10,5,2]
             damages = [] #per neighborhood
@@ -83,8 +89,6 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
                 
                 #Calculation per household
                 damages_household.append(RA.calculate_damage_household(inundation,i))
-                
-                #TODO: ADD ANTICIPATING ON FUTURE SEA LEVEL RISE
                     
             RA.risk[i] = risk_FP(damages.copy(),RPs.copy(),RA.protection_level_rp[i])*10**(-6) #EAD of Residential area in million 2010-euro's 
             RA.risk_household[i] = risk_FP(damages_household.copy(), RPs.copy(),RA.protection_level_rp[i]) #EAD [per household] in 2010-euros
@@ -130,7 +134,7 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
             measure.countdown(i,len(time)) #we need to tell the measure instances which timestep it is
         
         for Area in Model.allResidentialArea: #kan naar hierboven! als method van measure
-               Area.match_with_FloodProtection(Model.allFloodProtection)
+               RA.match_with_FloodProtection(Model.allFloodProtection)
     
     experiment = Experiment(Model,SurgeLevel,Mayor)
     
@@ -155,9 +159,9 @@ def init_time(Model,time,do_print=False):
     for FloodProtection in Model.allFloodProtection:
         FloodProtection.init_time(time)             
 
-    for Area in Model.allResidentialArea:
-        Area.match_with_FloodProtection(Model.allFloodProtection) #ADD THE INFORMATION OF THE FLOOD PROTECTION STRUCTURES TO THE AREAS IT PROTECTS
-        Area.init_time(time) #create all the variables that are manipulated over time
+    for RA in Model.allResidentialArea:
+        RA.match_with_FloodProtection(Model.allFloodProtection) #ADD THE INFORMATION OF THE FLOOD PROTECTION STRUCTURES TO THE AREAS IT PROTECTS
+        RA.init_time(time) #create all the variables that are manipulated over time
     
     if do_print:
         print('Time is initiated for all Flood protection and Residential Area objects')
