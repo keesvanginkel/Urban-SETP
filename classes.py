@@ -23,6 +23,8 @@ class Experiment():
        (2) managed by a one mayor,
        (3) in one storm surge scenario
        containing all information of the objects AFTER running the model
+       
+       can OPTIONALLY: also have metrics
     """
     
     def __init__(self,Model,SurgeLevel,Mayor,name=None):
@@ -58,6 +60,43 @@ class Experiment():
                                      name="{}_house_price_subj".format(RA.name)))     
         self.allMetrics = allMetrics
         return 
+    
+def save_experiments(experiments,path=None):
+    """
+    Saves a list of experiments to a pickle, so it can be reused
+    
+    Arguments:
+        *experiments* (list) : List containing Experiment objects
+        *path* (string) : Path to save pickle
+    """
+    import pickle
+    from datetime import datetime
+    
+    #save in a default folder
+    if not path:
+        foldername = "temp"
+        subfolder = "experiments"
+        target = os.path.join(foldername,subfolder)
+        
+        today = datetime.date(datetime.now())
+        date = "{}_{}_{}".format(today.year,today.month,today.day)
+        
+        if not os.path.exists(foldername):
+            os.mkdir(foldername)
+            if not os.path.exists(target):
+                os.mkdir(target)
+        path = os.path.join(target,"experiment_" + date + ".p")
+    
+    if os.path.exists(path):
+        print('The destination file {} already exists!'.format(path))
+        cont = input('Do you want to overwrite it? If so, type "y"\n If you type something else, it wont save.')
+        if cont is not 'y':
+            return print("File not saved")
+    
+    pickle.dump(experiments, open( os.path.join(path), "wb") ) 
+    return print("File saved at: {}".format(path))
+    
+save_experiments(mayor_experiments)
         
 class Model():
     def __init__(self,name):
