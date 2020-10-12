@@ -61,10 +61,11 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="414" y="174" key="#com.intellij.execution.impl.EditConfigurationsDialog/-1920.0.1536.832/0.0.1920.1040/1920.0.1920.1080@0.0.1920.1040" timestamp="1596642366107" />
-    <state x="740" y="274" key="FileChooserDialogImpl" timestamp="1596642214154">
+    <state x="740" y="274" key="FileChooserDialogImpl" timestamp="1601451030026">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="740" y="274" key="FileChooserDialogImpl/-1920.0.1536.832/0.0.1920.1040/1920.0.1920.1080@0.0.1920.1040" timestamp="1596642214154" />
+    <state x="740" y="274" key="FileChooserDialogImpl/-1920.0.1536.832/0.0.1920.1040@0.0.1920.1040" timestamp="1601451030026" />
     <state width="1899" height="282" key="GridCell.Tab.0.bottom" timestamp="1596642738081">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -81,5 +82,9 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1899" height="282" key="GridCell.Tab.0.right/-1920.0.1536.832/0.0.1920.1040/1920.0.1920.1080@0.0.1920.1040" timestamp="1596642738081" />
+    <state x="655" y="343" key="com.intellij.ide.util.TipDialog" timestamp="1601450990474">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="655" y="343" key="com.intellij.ide.util.TipDialog/-1920.0.1536.832/0.0.1920.1040@0.0.1920.1040" timestamp="1601450990473" />
   </component>
 </project>

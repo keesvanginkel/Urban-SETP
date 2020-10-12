@@ -39,10 +39,10 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,do_print=False):
     
     #Return the timeseries of the house price.
     HP_hp_t_obj = [x  if x > 0 else 0 for x in HP.house_price_t_objective] #set all values <0 to 0
-    HP_hp_t_sub = [x  if x > 0 else 0 for x in HP.house_price_t_objective]
+    HP_hp_t_sub = [x  if x > 0 else 0 for x in HP.house_price_t_subjective]
     
     CC_hp_t_obj = [x  if x > 0 else 0 for x in CC.house_price_t_objective] #set all values <0 to 0
-    CC_hp_t_sub = [x  if x > 0 else 0 for x in CC.house_price_t_objective]
+    CC_hp_t_sub = [x  if x > 0 else 0 for x in CC.house_price_t_subjective]
     
     #Also return the value of the timeseries in 2200
     HP_hp_2200_obj = HP_hp_t_obj[179]

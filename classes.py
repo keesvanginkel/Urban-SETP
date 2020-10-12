@@ -61,6 +61,57 @@ class Experiment():
         self.allMetrics = allMetrics
         return 
     
+    def to_df(self):
+        """
+        Convenience function to export some key experiment variables to a pandas dataframe
+        It iterates over the attributes of the different objects, and selects based on the values
+        defined in the lists "object_include"
+
+
+        Arguments:
+            *self* (Experiment object) : can have metrics or not
+
+        Returns:
+            *df* (Pandas DataFrame)
+        """
+        Model = self.Model
+        SurgeLevel = self.SurgeLevel
+        Mayor = self.SurgeLevel
+
+        df = pd.DataFrame(index=SurgeLevel.years)
+        df['name'] = self.name
+
+        #for attr, value in Model.__dict__.items():
+        #    print(attr)
+        SL_include = ['surgelevel']
+        SL = SurgeLevel
+        for attr, value in SL.__dict__.items():
+            if str(attr) in SL_include:
+                df["{}".format(attr)] = value
+
+        FP_include = ['protection_level','measure_history']
+        for FP in Model.allFloodProtection:
+            name = FP.name
+            if not name == 'No': #ignor the no
+                for attr, value in FP.__dict__.items():
+                    if str(attr) in FP_include:
+                        df["{}_{}".format(name,attr)] = value
+
+        RA_include = ['event_history','nearmiss_history','flood_damage','risk_household',
+                      'risk_household_perceived','risk_household_discounted','risk_household_discounted_perceived',
+                      'protection_level_rp','risk_perception','risk_perceived','house_price_t_subjective','house_price_t_objective']
+        for RA in Model.allResidentialArea:
+            name = RA.name
+            for attr, value in RA.__dict__.items():
+                #print(attr)
+                if str(attr) in RA_include:
+                    df["{}_{}".format(name,attr)] = value
+
+        ### Todo: also include metrics
+
+        return df
+    
+    
 def save_experiments(experiments,path=None):
     """
     Saves a list of experiments to a pickle, so it can be reused
@@ -90,13 +141,46 @@ def save_experiments(experiments,path=None):
     if os.path.exists(path):
         print('The destination file {} already exists!'.format(path))
         cont = input('Do you want to overwrite it? If so, type "y"\n If you type something else, it wont save.')
-        if cont is not 'y':
+        if cont != 'y':
             return print("File not saved")
     
     pickle.dump(experiments, open( os.path.join(path), "wb") ) 
     return print("File saved at: {}".format(path))
+
+def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All'):
+    """Filter a list of experiments, based on the inputs values
     
-save_experiments(mayor_experiments)
+    Arguments:
+        *experiments* (list of experiment objects) : The input experiments
+        *SLR_scenario* (str/list of strs) : Number referring to the SLR scenario
+        *SurgeHeight* (int or string / list of ints/strings) : Number referring to the transient storm surge height scenario
+        *Mayor* (str/list of strs) : Name of the mayor(s)
+    
+    Returns:
+        *selection* (list of experiment objects) : The selected experiments
+    """
+    selection = experiments
+    
+    
+    if not SLR_scenarios == 'All':
+        if isinstance(SLR_scenarios,str):
+            SLR_scenarios = [SLR_scenarios] #put the value in a list
+        SLR_scenarios = ['Scenario_' + name for name in SLR_scenarios]
+        selection = [exp for exp in experiments if exp.SurgeLevel.corresponding_SLR_Scenario.name in SLR_scenarios]
+    
+    if not SurgeHeights == 'All':
+        if not isinstance(SurgeHeights,list):
+            SurgeHeights = [SurgeHeights]
+        SurgeHeights = [str(x) for x in SurgeHeights] #make them strings if they were ints
+        selection = [exp for exp in selection if exp.SurgeLevel.corresponding_SurgeHeight.name in SurgeHeights]
+    
+    if not Mayors == 'All':
+        if not isinstance(Mayors,list):
+            Mayors = [Mayors]
+        selection = [exp for exp in selection if exp.name.split('_')[-1] in Mayors]
+    
+    return selection
+    
         
 class Model():
     def __init__(self,name):
@@ -863,7 +947,7 @@ class Metric():
 
         Arguments:
             *self.statistics* (DataFrame) : output of examine_series
-            *c1* (float) : absolute change in change of metric: detect rapid change
+            *c1* (float) : absolute change of house price as fraction of house price at t0: detect rapid change
             *c2* (float) : absolute valued threshold for variance: detect stable states
             *c3* (float) : percentage of change between states: substantially different states
             *window* (int) : window size for functionality using a moving window
@@ -878,10 +962,16 @@ class Metric():
         df = pd.DataFrame(index=ind)
 
         #Criterion 1: check for rapid change
-        #c1 = 5 #percentage of change per timestep considered 'rapid'
-        #c1 = 10e3 # absolute house-price change per timestep considered 'rapid'
-        df["rapid change"] = pd.Series(index=ind,data=[1]*len(ind))[(statistics["First order derivative (dM/dt)"] < -c1)]
-        c1met = list(df[df["rapid change"].notnull()].index) #list of years in which c2 is met
+        #c1 = 5 #percentage of change per timestep (compared to house price at t0) considered rapid
+        house_price_t0 = self.raw.iloc[0]
+        #negative change
+        df["rapid change_neg"] = pd.Series(index=ind,data=[-1]*len(ind)) \
+                     [(statistics["First order derivative (dM/dt)"] <= -c1* house_price_t0)]
+        #positive change
+        df["rapid change_pos"] = pd.Series(index=ind,data=[1]*len(ind)) \
+                     [(statistics["First order derivative (dM/dt)"] >= +c1* house_price_t0)]
+        c1met = list(df[df["rapid change_neg"].notnull()].index) #list of years in which c1 is met
+        c1met.append(list(df[df["rapid change_pos"].notnull()].index)) 
         
         
         #Criterion 2: check if variance is above threshold to detect stable states
@@ -893,13 +983,13 @@ class Metric():
 
         #Criterion 3: check if states on both sides of threshold are different
         #c3 = 10 #percentage of change that states before and after should be different
-        c3met = []
-        for y in c1met:
-            avg_b,avg_a = average_before_after(statistics.iloc[:,0],y,window=window,margin=margin)
-            perc = 100*(avg_a-avg_b)/avg_a
-            if (perc < -1*c3) or (perc > c3) :
-                c3met.append(y)
-        df["substantial different states"] = pd.Series(index=c3met,data=[3]*len(c3met))
+        #c3met = []
+        #for y in c1met:
+        #    avg_b,avg_a = average_before_after(statistics.iloc[:,0],y,window=window,margin=margin)
+        #    perc = 100*(avg_a-avg_b)/avg_a
+        #    if (perc < -1*c3) or (perc > c3) :
+        #        c3met.append(y)
+        #df["substantial different states"] = pd.Series(index=c3met,data=[3]*len(c3met))
         self.candidates = df
     
         return df
@@ -917,8 +1007,10 @@ class Metric():
             statistics[col].plot(ax=ax[i],title=col)
         fig.suptitle('{}_{}'.format(exp_name,statistics.columns[0]))
         candidates.plot(ax=ax[nrows-1],title='SETP candidates by criterion',style='o')
-        if save:
-            fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format(exp_name,statistics.columns[0]),dpi=150,bbox_inches='tight'))
+        if save: fig.savefig(os.path.join(output_path, \
+                "{}_{}_statistics.png".format(exp_name,statistics.columns[0]),dpi=150,bbox_inches='tight'))
+        return fig,ax
+        
         
 
 def average_before_after(data,year,window=5,margin=2):
