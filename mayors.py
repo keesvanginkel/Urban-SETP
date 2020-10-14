@@ -13,10 +13,6 @@ import copy
 #Own modules
 from classes import *
 
-#SOME MEASURES THAT MANY MAYORS WILL USE
-small = Measure_FloodProtection("Minor Dike Heightening", 7, 0.5)
-large = Measure_FloodProtection("Major Dike Heightening", 10, 1)
-
 class Reactive(Mayor):
     """
     Reactive management strategy:
@@ -31,7 +27,22 @@ class Reactive(Mayor):
         return('mr. Ree Active')
     
     
-    def apply_strategy(self,Model,SurgeLevel,i,time):
+    def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
+        """
+        Arguments:
+            *Model* (Model object)
+            *SurgeLevel* (SurgeLevel object)
+            *Measures* (tuple of measures) = (small,large)
+                tuple items are of type 'Measure_FloodProtection'
+            *i* (int) : index of timestep
+            *time* (list) : all years
+            
+        Effect of this method is that Measures will be implemented 
+        in the model object after some lead time
+        """
+        #DRAW MEASURES FROM THE LIST
+        small = Measures[0]
+        large = Measures[1]
         
         #STRATEGY FOR THE OUTERDIKE AREA
         #TODO
@@ -41,7 +52,8 @@ class Reactive(Mayor):
         FP = Model.allFloodProtection[1] #the object to which to apply the heightening
         
         if CC.event_impact_history[i] == 10:
-            #print('Small measure triggered')
+            #print('Small measure triggered', str(time[i]))
+            #print(small.name, small.lead_time)
             #check if there are already measures planned
             newmeasure = copy.deepcopy(small) #make a copy of the measure to implement
             
@@ -88,7 +100,22 @@ class Lawkeeper(Mayor):
     def get_full_name(self):
         return('Ms. A.L.L. Lawkeeper')
     
-    def apply_strategy(self,Model,SurgeLevel,i,time):
+    def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
+        """
+        Arguments:
+            *Model* (Model object)
+            *SurgeLevel* (SurgeLevel object)
+            *Measures* (tuple of measures) = (small,large)
+                tuple items are of type 'Measure_FloodProtection'
+            *i* (int) : index of timestep
+            *time* (int) : year of timestep
+            
+        Effect of this method is that Measures will be implemented 
+        in the model object after some lead time
+        """
+        #DRAW MEASURES FROM THE LIST
+        small = Measures[0]
+        large = Measures[1]
         
         #The law prescripes the following thresholds
         self.threshold_small = 10000 #Underceedance threshold for implementing small upgrade return period (year)
@@ -147,7 +174,23 @@ class Economicus(Mayor):
     def get_full_name(self):
         return('Mr. H. Economicus')
     
-    def apply_strategy(self,Model,SurgeLevel,i,time):
+    def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
+        """
+        Arguments:
+            *Model* (Model object)
+            *SurgeLevel* (SurgeLevel object)
+            *Measures* (tuple of measures) = (small,large)
+                tuple items are of type 'Measure_FloodProtection'
+            *i* (int) : index of timestep
+            *time* (int) : year of timestep
+            
+        Effect of this method is that Measures will be implemented 
+        in the model object after some lead time
+        """
+        #DRAW MEASURES FROM THE LIST
+        small = Measures[0]
+        large = Measures[1]
+        
         
         #STRATEGY FOR THE HEIJPLAAT
         HP = Model.allResidentialArea[0] #Select the Heijplaat Residential Area object
@@ -207,7 +250,22 @@ class Sentiment(Mayor):
     def get_full_name(self):
         return('Mr. Peter Sentiment')    
     
-    def apply_strategy(self,Model,SurgeLevel,i,time):
+    def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
+        """
+        Arguments:
+            *Model* (Model object)
+            *SurgeLevel* (SurgeLevel object)
+            *Measures* (tuple of measures) = (small,large)
+                tuple items are of type 'Measure_FloodProtection'
+            *i* (int) : index of timestep
+            *time* (int) : year of timestep
+            
+        Effect of this method is that Measures will be implemented 
+        in the model object after some lead time
+        """
+        #DRAW MEASURES FROM THE LIST
+        small = Measures[0]
+        large = Measures[1]
         
         #STRATEGY FOR THE CITY CENTRE
         CC = Model.allResidentialArea[1]

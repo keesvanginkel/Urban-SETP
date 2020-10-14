@@ -219,7 +219,7 @@ class Model():
         
 class Mayor(ABC): #is subclass of ABC (abstract base class)
     @abstractmethod #in te vullen door subclasses (verplicht!)
-    def apply_strategy(self,Model,SurgeSeries,i,time):
+    def apply_strategy(self,Model,SurgeSeries,Measures,i,time):
         pass
     
     @abstractmethod
@@ -733,6 +733,7 @@ class Measure():
             self.time_to_implementation = self.time_to_implementation - 1
         elif self.time_to_implementation == 0:
             self.implement_measure(i,end)
+            #print(self,'implemented!')
         
 class Measure_FloodProtection(Measure):
     def __init__(self,name,lead_time,heightening):
@@ -941,7 +942,7 @@ class Metric():
         if save:
             fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format("exp_name",statistics.columns[0],dpi=150)))
     
-    def select_candidates(self,c1=10e3,c2=0.2e10,c3=10,window=5,margin=2):
+    def select_candidates(self,c1=0.15,c2=0.2e10,c3=10,window=5,margin=2):
         """
         Select tipping point candidates based on three criteria
 

@@ -14,7 +14,7 @@ import pickle
 
 from pdb import set_trace
 
-def run_model_workbench(SLR,transient,Mayor,Housing_market,do_print=False):  
+def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,do_print=False):  
     
     #IMPORT MODEL
     from models import Rotty
@@ -25,7 +25,10 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,do_print=False):
     #IMPORT SURGELEVEL
     SurgeLevel = generate_SurgeLevel_new(SLR,transient)
     
-    experiment = run_model01(Rotty,SurgeLevel,Mayor,do_print)
+    #Convert implementation time to format we can use
+    implementation_time = (implementation_time,int(round(implementation_time*10/7,0)))
+    
+    experiment = run_model01(Rotty,SurgeLevel,Mayor,Implementation_time=implementation_time,do_print=False)
     
     def Average(lst): 
         return sum(lst) / len(lst) 
@@ -58,7 +61,7 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,do_print=False):
     margin = 2 # The margin around the TP
 
     #Criteria
-    c1 = 0.15*350_000 #TODO: make different per RA (300,000 and 350,000)
+    c1 = 0.15
     c2 = 1e10 #variance
     c3 = 10 #percent
     experiment.create_Metrics()
@@ -66,7 +69,7 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,do_print=False):
     for M in experiment.allMetrics:
         M.create_statistics() #Create summary statistics for the metric(t)
         M.select_candidates(c1=c1,c2=c2,c3=c3,window=window,margin=margin) #Evaluate the three tipping point criteria
-        M.first_SETP = M.candidates['rapid change'].first_valid_index() #The first year in which a rapid change is found
+        M.first_SETP = M.candidates['rapid change_neg'].first_valid_index() #The first year in which a rapid change is found
     
     #Decide on which value to return using type of housing market (R0 or R1)
     if Housing_market == 'rational':

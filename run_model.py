@@ -8,7 +8,7 @@ from classes import *
 k = 0.2 
 T_eq = 70
 
-def run_model01(Model,SurgeLevel,Mayor,do_print=False):  
+def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False):  
     """
     The algorithm describing all the steps in one model experiment
     
@@ -16,11 +16,21 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
         *Model* (Model object) : Model object describing the city
         *SurgeLevel* (SurgeLevel object) : The extreme water level per year
         *Mayor* (Mayor object) : The mayor for this experiment
+        *Implementation_time* (tuple) : Implementation time of the large and small measures respectively 
+            Tuple elements (int) : Time in years
         
     Returns:
         *Experiment* (Experiment) : Contains all input arguments including the development of the model over time
     
     """
+    
+    #DEFINE MEASURES THAT MANY MAYORS WILL USE
+    #since 14/10/2020 they are defined in the experiment
+    small = Measure_FloodProtection("Minor Dike Heightening", Implementation_time[0], 0.5)
+    large = Measure_FloodProtection("Major Dike Heightening", Implementation_time[1], 1)
+    Measures = (small,large)
+    
+    print(Measures)
     
     #REMOVE ALL ACTIVE MEASURES FROM PREVIOUS RUNS
     allactiveMeasure.clear()
@@ -137,7 +147,7 @@ def run_model01(Model,SurgeLevel,Mayor,do_print=False):
             
             
         #IMPLEMENT FLOOD PROTECTION MEASURES
-        Mayor.apply_strategy(Model,SurgeLevel,i,time)
+        Mayor.apply_strategy(Model,SurgeLevel,Measures,i,time)
         for measure in allactiveMeasure: #tell all measures that are currently planned that a timestep has passed and that their implementation is coming near 
             measure.countdown(i,len(time)) #we need to tell the measure instances which timestep it is
         
