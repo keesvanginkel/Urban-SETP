@@ -734,6 +734,10 @@ class Measure():
         elif self.time_to_implementation == 0:
             self.implement_measure(i,end)
             #print(self,'implemented!')
+        elif self.time_to_implementation < 0:
+            #This is a situation that occured in the model version 14/10/2020, if implementation times become to small
+            raise ValueError('Somehow the time_to_implementation became negative for measure {} in timestep {}'.format(self,i))
+            
         
 class Measure_FloodProtection(Measure):
     def __init__(self,name,lead_time,heightening):
