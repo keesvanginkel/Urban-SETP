@@ -717,12 +717,12 @@ class Measure():
         self.name = name
         self.lead_time = lead_time #time it takes to implement the measure
         
-    def __repr__(self):
-        return self.name + " " + str(self.lead_time) + " " + str(self.heightening)
-        
+
     def plan_measure(self,apply_to,i):
+        """ self.time_to_implementation is a counter, 
+        which counts how many years remain before measure is active"""
+        
         self.apply_to = apply_to #flood protection object to which measure should be applied
-        #hier nu ergens gaan kijken wat voor maatregelen er precies zijn
         self.time_to_implementation = self.lead_time
         allactiveMeasure.append(self)
         #### houd ergens bij in de historie dat je deze measure gepland hebt.
@@ -737,7 +737,14 @@ class Measure():
         elif self.time_to_implementation < 0:
             #This is a situation that occured in the model version 14/10/2020, if implementation times become to small
             raise ValueError('Somehow the time_to_implementation became negative for measure {} in timestep {}'.format(self,i))
-            
+
+    def __repr__(self):
+        if hasattr(self,'time_to_implementation'):
+            extra_string = ", time_to_implementation: " + str(self.time_to_implementation) + "y"
+        else:
+            extra_string = ', not yet implemented'
+        return self.name + ", lead_time: " + str(self.lead_time) + "y, heightening: " + str(self.heightening) + "m " + extra_string
+        
         
 class Measure_FloodProtection(Measure):
     def __init__(self,name,lead_time,heightening):

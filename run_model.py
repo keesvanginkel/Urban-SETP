@@ -30,8 +30,6 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
     large = Measure_FloodProtection("Major Dike Heightening", Implementation_time[1], 1)
     Measures = (small,large)
     
-    print(Measures)
-    
     #REMOVE ALL ACTIVE MEASURES FROM PREVIOUS RUNS
     allactiveMeasure.clear()
     

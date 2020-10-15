@@ -13,6 +13,13 @@ import copy
 #Own modules
 from classes import *
 
+
+#Factor which is only relevant if a more radical measure is proposed when they where
+#still working on another (smaller) measure
+measure_bonus_factor = 0.5 #fraction of the years of the smaller measure, that implementing 
+                           #the new measure will go faster
+
+
 class Reactive(Mayor):
     """
     Reactive management strategy:
@@ -77,9 +84,20 @@ class Reactive(Mayor):
             if len(lst) != 0: #if there is an active measure
                 measure_inprogress = lst[0]
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
-                    #print('Er was al een plan, maar het nieuwe is radicaler!!!')
+                    #print('A special situation occurs. The old plan was: {}'.format(measure_inprogress))
+                    #print('The new plan is: {}'.format(newmeasure))
+                    
+                    #number of years they were already working on the old measure before they decided
+                    #that they should give up and work on the new measures
+                    already_working_on_it = measure_inprogress.lead_time - measure_inprogress.time_to_implementation
+                    bonus = int(round(already_working_on_it*measure_bonus_factor,0)) #how much faster can the new measure go?
+                    bonus = max(0,bonus) #bonus should never become smaller than 0 
+                    
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster! #was 5 everywhere
+                    
+                    #print('The bonus is: {}'.format(bonus))
+                    newmeasure.lead_time = newmeasure.lead_time - bonus #you can implement the new plan faster!
+                    #print('So the new planned measure is: {}'.format(newmeasure))
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
@@ -153,9 +171,20 @@ class Lawkeeper(Mayor):
             if len(lst) != 0: #if there is an active measure
                 measure_inprogress = lst[0]
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
-                    #print('Er was al een plan, maar het nieuwe is radicaler!!!')
+                    #print('A special situation occurs. The old plan was: {}'.format(measure_inprogress))
+                    #print('The new plan is: {}'.format(newmeasure))
+                    
+                    #number of years they were already working on the old measure before they decided
+                    #that they should give up and work on the new measures
+                    already_working_on_it = measure_inprogress.lead_time - measure_inprogress.time_to_implementation
+                    bonus = int(round(already_working_on_it*measure_bonus_factor,0)) #how much faster can the new measure go?
+                    bonus = max(0,bonus) #bonus should never become smaller than 0 
+                    
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster!
+                    
+                    #print('The bonus is: {}'.format(bonus))
+                    newmeasure.lead_time = newmeasure.lead_time - bonus #you can implement the new plan faster!
+                    #print('So the new planned measure is: {}'.format(newmeasure))
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
@@ -225,9 +254,20 @@ class Economicus(Mayor):
             if len(lst) != 0: #if there is an active measure
                 measure_inprogress = lst[0]
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
-                    #print('Er was al een plan, maar het nieuwe is radicaler!!!')
+                    #print('A special situation occurs. The old plan was: {}'.format(measure_inprogress))
+                    #print('The new plan is: {}'.format(newmeasure))
+                    
+                    #number of years they were already working on the old measure before they decided
+                    #that they should give up and work on the new measures
+                    already_working_on_it = measure_inprogress.lead_time - measure_inprogress.time_to_implementation
+                    bonus = int(round(already_working_on_it*measure_bonus_factor,0)) #how much faster can the new measure go?
+                    bonus = max(0,bonus) #bonus should never become smaller than 0 
+                    
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster!
+                    
+                    #print('The bonus is: {}'.format(bonus))
+                    newmeasure.lead_time = newmeasure.lead_time - bonus #you can implement the new plan faster!
+                    #print('So the new planned measure is: {}'.format(newmeasure))
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
@@ -291,9 +331,20 @@ class Sentiment(Mayor):
             if len(lst) != 0: #if there is an active measure
                 measure_inprogress = lst[0]
                 if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
-                    #print('Er was al een plan, maar het nieuwe is radicaler!!!')
+                    #print('A special situation occurs. The old plan was: {}'.format(measure_inprogress))
+                    #print('The new plan is: {}'.format(newmeasure))
+                    
+                    #number of years they were already working on the old measure before they decided
+                    #that they should give up and work on the new measures
+                    already_working_on_it = measure_inprogress.lead_time - measure_inprogress.time_to_implementation
+                    bonus = int(round(already_working_on_it*measure_bonus_factor,0)) #how much faster can the new measure go?
+                    bonus = max(0,bonus) #bonus should never become smaller than 0 
+                    
                     allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
-                    newmeasure.lead_time = newmeasure.lead_time - 7 #you can implement the new plan faster!
+                    
+                    #print('The bonus is: {}'.format(bonus))
+                    newmeasure.lead_time = newmeasure.lead_time - bonus #you can implement the new plan faster!
+                    #print('So the new planned measure is: {}'.format(newmeasure))
                     newmeasure.plan_measure(FP,i)
                     #print(allactiveMeasure)
    
