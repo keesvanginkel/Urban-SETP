@@ -13,7 +13,7 @@ from pdb import set_trace
 
 
 #TRACK THE OBJECTS THAT WERE INITIATED
-allSurgeSeries = []
+#allSurgeSeries = []
 allSLR_Scenario = []
 allSurgeHeight = []
 allSurgeLevel = []
@@ -311,10 +311,43 @@ class SurgeHeight:
     
     This should be added to the sea level to get the storm surge level
     
+    Should have the attributes:
+        *self.name* (string) : name
+        *self.years* (list of ints/floats) : the years eg. [2020,2021,...,2300]
+        *self.surgeheight* (list of floats) : the surge height per year [2.3, 4.1, ... , 1.8]
+    
     """
     def __init__(self,name):
         allSurgeHeight.append(self)
-        self.name = name   
+        self.name = name  
+        
+    def from_Gumbel(self,startyear,endyear,mu,beta,csv_path=False):
+        """
+        Fill a SurgeHeight series with values from a gumbel distribution
+        by drawing an extreme value for each year
+        
+        Arguments:
+            *startyear* (int)      : year for which to draw a first value (inclusive boundary)
+            *endyear* (int)        : year for which to draw the last value (inclusive boundary)
+            *mu* (float)           : mu of the distribution [m]
+            *beta* (float)         : beta of the distribution [m]
+            *csv_path* (string)    : path to save the result (default False)
+        
+        Returns:
+            *SurgeSeries* (object)
+            
+        
+        Effect:
+            -> can save the object as a csv file (which can be loaded afterwards using from_csv)
+        
+        """
+        endyear = endyear + 1 #turn into inclusive boundary
+        self.years = list(range(startyear,endyear))
+        self.surgeheight = np.random.gumbel(mu,beta,size=endyear-startyear)
+        
+        if isinstance(csv_path,str):
+            series = pd.Series(data=self.surgeheight,index=self.years)
+            series.to_csv(csv_path,header=False) 
 
     def from_csv(self,filepath):
         """Get the Surge Height from a transient surge scenario
@@ -332,7 +365,10 @@ class SurgeHeight:
         self.surgeheight = [float(i) for i in surgelevel] #convert strings to floats
 
     def __repr__(self):
-        return self.name +  "\n" + str(list(zip(self.years,self.surgeheight)))
+        if hasattr(self,'years') and hasattr(self,'surgeheight'):
+            data_string = str(list(zip(self.years,self.surgeheight)))
+        else: data_string = 'no years and surgeheights present'
+        return self.name +  "\n" + data_string
     
     def __str__(self):
         return self.name
@@ -410,52 +446,6 @@ def generate_SurgeLevel_new(SLR,transient):
     return SurgeLevel
     
     
-def generate_SurgeLevel_transient(RCP,collapse,PDF,transient): #DEPRECIATED
-    """
-    Generate a SurgeLevel timeseries (=SLR + SurgeHeight)
-    
-    Arguments:
-        *RCP* (string) : Representative Concentration Pathway e.g. 'RCP26'
-        *collapse* (boolean) : Account for collapse of icesheets (i.e. use Bamber)
-        *PDF* (int) : Percentage indicating the likelihood from the probability density function (e.g. 17)
-        *transient* (int) : Integer indicating which transient scenario to use
-        
-    Returns:
-        *SurgeLevel* (SurgeLevel object) : has time, surgelevel per time and some metadata
-    """
-    if collapse: 
-        SLR_source = "Bamber_2019"
-        RCP = "high" #this is weird, but works for now
-    else:
-        SLR_source = "SROCC_2019" 
-    
-    #READ THE SLR INFO
-    SLR_folder = "SLR_projections" ###TODO CHANGE WITH CONFIG
-    SLR_name = "{}_{}_{}".format(SLR_source,RCP,PDF)
-    SLR_path = os.path.join(SLR_folder,SLR_name+'.csv')
-    
-    if not os.path.exists(SLR_path):
-        print("SLR path : {} does NOT EXIST".format(SLR_path)) #throw an error!
-        return None
-    
-    SLR_obj = SLR_Scenario(SLR_name) #Create instance of object
-    SLR_obj.from_csv(SLR_path)
-    
-    #READ THE TRANSIENT SCENARIO
-    SH_folder = "SurgeHeight" ###TODO READ FROM CONFIG
-    SH_name = str(transient)
-    SH_path = os.path.join(SH_folder,SH_name+'.csv')
-    
-    if not os.path.exists(SH_path):
-        print("SH path : {} does NOT EXIST".format(SH_path)) #throw an error!
-        return None
-    
-    SH_obj = SurgeHeight(SH_name)
-    SH_obj.from_csv(SH_path)
-    
-    SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj)
-
-    return SurgeLevel
 
 class FloodProtection:
     """

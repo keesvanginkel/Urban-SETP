@@ -23,7 +23,18 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,d
     Model = Rotty #this can also be an argument of the function
     
     #IMPORT SURGELEVEL
-    SurgeLevel = generate_SurgeLevel_new(SLR,transient)
+    #load all SLR scenarios available as pickles
+    allSLR_Scenario = SLR_Scenario_from_pickles(os.path.join("SLR_projections","Transients"))
+    #and select the right one
+    SLR_obj = [x for x in allSLR_Scenario if x.name.split('__')[0].split('_')[1] == SLR][0]
+    
+    SH_name = transient.split('\\')[-1].split('.')[0]
+    SH_obj = SurgeHeight(SH_name)
+    SH_obj.from_csv(transient)
+    
+    SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj) 
+    
+    #SurgeLevel = generate_SurgeLevel_new(SLR,transient)
     
     #Convert implementation time to format we can use
     implementation_time = (implementation_time,int(round(implementation_time*10/7,0)))
