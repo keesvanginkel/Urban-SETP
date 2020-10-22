@@ -157,7 +157,7 @@ class Metric():
 
         self.candidates = df #save some of the converted statistics as a df to make the plotting easier
         
-    def select_SETPs(self,sign):
+    def select_SETPs(self,sign,add_stable_after=False,add_stable_before=False):
         """
         Select a subgroup of SETPs from candidates
         
@@ -173,7 +173,7 @@ class Metric():
         
         sel_cands = [setp for setp in self.allSETPs_cands if setp.sign == sign]
 
-        perfect_example_years = [setp.year for setp in sel_cands if setp.Type == 'real' and setp.duptype != 'dup']
+        selected_examples_years = [setp.year for setp in sel_cands if setp.Type == 'real' and setp.duptype != 'dup']
         duplicates_years = [setp.year for setp in sel_cands if setp.duptype == 'dup']
         only_after = [setp.year for setp in sel_cands if setp.Type == 'oa']
         only_before = [setp.year for setp in sel_cands if setp.Type == 'ob']
@@ -195,10 +195,11 @@ class Metric():
                         n += 1
 
         for setp in additions:
-            perfect_example_years.append(setp.year)
+            selected_examples_years.append(setp.year)
             
-        self.selected_SETPs = perfect_example_years[:]
+        self.selected_SETPs = selected_examples_years[:]
         
+        #Todo: save as a dict
         self.candidates_as_lists = (self.selected_SETPs,duplicates_years,only_after,only_before,same_window,not_before_not_after)
         
     def plot_SETPs(self,window):
