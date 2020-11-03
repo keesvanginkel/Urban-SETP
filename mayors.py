@@ -216,6 +216,11 @@ class Economicus(Mayor):
         Effect of this method is that Measures will be implemented 
         in the model object after some lead time
         """
+        #We assume that from CBA follow these threshold (mln euro per year)
+        self.threshold_small = 5 #Underceedance threshold for implementing small upgrade return period (year)
+        self.threshold_large = 10 #Underceedance threshold for implementing large upgrade return period (year)
+        
+        
         #DRAW MEASURES FROM THE LIST
         small = Measures[0]
         large = Measures[1]
@@ -234,7 +239,7 @@ class Economicus(Mayor):
         CC = Model.allResidentialArea[1]
         FP = Model.allFloodProtection[1] #the object to which to apply the heightening
 
-        if 5 <= CC.risk[i] < 10: #If the flood risk in the City Centre exceeds X mln euro per year
+        if self.threshold_small <= CC.risk[i] < self.threshold_large: #If the flood risk in the City Centre exceeds X mln euro per year
             newmeasure = copy.deepcopy(small) #make a copy of the measure to implement    
             lst = [Measure for Measure in allactiveMeasure if Measure.apply_to.name == FP.name]
             #list is either empty or has an active object
@@ -246,7 +251,7 @@ class Economicus(Mayor):
             else: #there are no active measures
                 newmeasure.plan_measure(FP,i)
 
-        elif CC.risk[i] >= 10: #If the flood risk in the City Centre exceeds X mln euro per year
+        elif CC.risk[i] >= self.threshold_large: #If the flood risk in the City Centre exceeds X mln euro per year
             newmeasure = copy.deepcopy(large) #make a copy of the measure to implement
             
             lst = [Measure for Measure in allactiveMeasure if Measure.apply_to.name == FP.name]

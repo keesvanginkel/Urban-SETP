@@ -15,9 +15,21 @@ import tipping as tp
 
 #TRACK THE OBJECTS THAT WERE INITIATED
 #allSurgeSeries = []
+global allSLR_Scenario, allSurgeHeight, allSurgeLevel
+
 allSLR_Scenario = []
 allSurgeHeight = []
 allSurgeLevel = []
+
+def reset_scenarios():
+    """
+    Start with empty lists that trakc the scenario objects
+    """    
+    allSLR_Scenario = []
+    allSurgeHeight = []
+    allSurgeLevel = []
+    return print("allSLR_Scenario, allSurgeHeight, and allSurgeLevel emptied")
+    
 
 class Experiment():
     """An experiment object is a unique combination of (1) one model (a city), 

@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import os
+from pathlib import Path
 #import ipywidgets as widgets
 import pickle
 
@@ -22,19 +23,19 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,d
     
     Model = Rotty #this can also be an argument of the function
     
-    #IMPORT SURGELEVEL
+    #IMPORT SLR Scenario
     #load all SLR scenarios available as pickles
-    allSLR_Scenario = SLR_Scenario_from_pickles(os.path.join("SLR_projections","Transients"))
+    allSLR_Scenario = SLR_Scenario_from_pickles(Path("SLR_projections","Transients"))
     #and select the right one
+    #TODO: pathlib
     SLR_obj = [x for x in allSLR_Scenario if x.name.split('__')[0].split('_')[1] == SLR][0]
     
-    SH_name = transient.split('\\')[-1].split('.')[0]
-    SH_obj = SurgeHeight(SH_name)
+    #Import SurgeHeight
+    SH_obj = SurgeHeight(transient.stem)
     SH_obj.from_csv(transient)
     
+    #Combine SLR and SurgeHeight scenario to SurgeLevel
     SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj) 
-    
-    #SurgeLevel = generate_SurgeLevel_new(SLR,transient)
     
     #Convert implementation time to format we can use
     implementation_time = (implementation_time,int(round(implementation_time*10/7,0)))
@@ -113,7 +114,7 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,d
         CC_first_SETP = 9999
         
     
-    return HP_hp_2200, CC_hp_2200_obj, CC_hp_2200_sub, HP_first_SETP, CC_first_SETP
+    return HP_hp_2200, CC_hp_2200, HP_first_SETP, CC_first_SETP
     
 def init_time(Model,time,do_print=False):
     """
