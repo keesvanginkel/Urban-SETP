@@ -124,11 +124,12 @@ class Metric():
         df["stable"] = pd.Series(index=ind,data=[2]*len(ind))[self.statistics["Window variance"] < c2]
 
         #The self.candidates originates from the select_candidates functions, TODO: this should be done by this function
-        self.stable_states = find_states(df['stable'],4,2.0) #returns begin and end years of stable states
+        self.stable_states = find_states(df['stable'],window,2.0) #returns begin and end years of stable states
 
         #Adds stable state before and after the SETP to the SETP object
         for cand in self.allSETPs_cands:
             before, after = find_window_around_point(cand.year,self.stable_states,margin=margin,index=True)    
+            #before and after are the indices of the states before and after; or None
             cand.before = before
             cand.after = after    
 
@@ -142,7 +143,6 @@ class Metric():
 
         ##CLASSIFYING REMAINING EXAMPLES
         for i, cand in enumerate(self.allSETPs_cands):
-            #index,before,after = cand.year,cand.before,cand.after
             if not cand.Type == 'sw': #don't check if already assigned 'same window'
                     if cand.before is not None: #stable state before point
                         if cand.after is not None: #stable state after point
@@ -154,10 +154,34 @@ class Metric():
                             cand.Type = 'oa'
                         else: 
                             cand.Type = 'no'
+                            
+        #########################################################
+        # CRITERION 3: CHECK FOR SUBSTANTIALLY DIFFERENT STATES #
+        #########################################################     
+        
+        for i, cand in enumerate(self.allSETPs_cands):
+            if cand.Type == 'real': #only check for the ones that meet C1 and C2
+                end_state_before = self.stable_states[cand.before][1] #last year of previous state
+                #print('end_state_before',end_state_before)
+                last_house_price_stateA = self.statistics.loc[end_state_before].iloc[0]
+                #print('last_house_price_stateA',last_house_price_stateA)
+                start_state_after = self.stable_states[cand.after][0] #first year of next state
+                #print('start_state_after',start_state_after)
+                first_house_price_stateB = self.statistics.loc[start_state_after].iloc[0]
+                #print('first_house_price_stateB',first_house_price_stateB)
+                difference = last_house_price_stateA - first_house_price_stateB
+                perc_of_A = abs(100 * difference / last_house_price_stateA)
+                perc_of_B = abs(100 * difference / first_house_price_stateB)
+                #print('perc_of_A',perc_of_A)
+                #print('perc_of_B',perc_of_B)
+                
+                if (perc_of_A <= c3) or (perc_of_B <= c3): #difference is not substantial enough
+                    cand.Type = 'us' #unsubstantial difference between before and after
+                    
 
         self.candidates = df #save some of the converted statistics as a df to make the plotting easier
         
-    def select_SETPs(self,sign,add_stable_after=False,add_stable_before=False):
+    def select_SETPs(self,sign,add_stable_after=False,add_stable_before=False,add_unsubstantial=False):
         """
         Select a subgroup of SETPs from candidates
         
@@ -165,6 +189,10 @@ class Metric():
         
         Arguments:
             *sign* (int) : -1 or 1, indicating positive or negative 'rapid changes'
+            *add_stable_after* (bool) : add cands which are only stable after the rapid change (type 'oa')
+            *add_stable_before* (bool) : add cands which are only stable before the rapid change (type 'ob')
+            *add_unsubstantial* (bool) : add cands which states before are not substantially different
+                                         from the state after (type 'us')
         
         Effect:
             creates self.selected_SETPs (list) : sequence of SETP objects
@@ -179,6 +207,7 @@ class Metric():
         only_before = [setp.year for setp in sel_cands if setp.Type == 'ob']
         same_window = [setp.year for setp in sel_cands if setp.Type == 'sw']
         not_before_not_after = [setp.year for setp in sel_cands if setp.Type == 'no']
+        unsubstantial = [setp.year for setp in sel_cands if setp.Type == 'us']
 
 
         #MANUALLY ADD THE POSITIVE SETPS IF THEY HAVE A NEGATIVE DUPLICATE
@@ -200,21 +229,33 @@ class Metric():
         self.selected_SETPs = selected_examples_years[:]
         
         #Todo: save as a dict
-        self.candidates_as_lists = (self.selected_SETPs,duplicates_years,only_after,only_before,same_window,not_before_not_after)
+        self.candidates_as_lists = (self.selected_SETPs,duplicates_years,only_after,
+                only_before,same_window,not_before_not_after,unsubstantial)
         
-    def plot_SETPs(self,window):
+    def plot_SETPs(self,window,**kwargs):
         """
         Plot the results
         
         This should be run after select_SETPs
         
+        Arguments:
+            *window* (int) : window size in years
+            **kwargs** () : will be passed to plt.subplots()
+        
+        Returns:
+            fig,ax (matplotlib objects)
+            
+        Make sure the size of the window equals the size of the window in which the previous steps were done.
+        TODO: maybe we should add the window and margin size to the metric object?
+        
         """
         
         #get the output of the select_SETPs functions (this is not exactly the same as 
         #just the candidates, because we selected on sign)
-        selected_SETPs,duplicates_years,only_after,only_before,same_window,not_before_not_after = self.candidates_as_lists
+        selected_SETPs,duplicates_years,only_after,only_before, \
+            same_window,not_before_not_after, unsubstantial = self.candidates_as_lists
         
-        fig, ax = plt.subplots(nrows=3,figsize=(15,8))
+        fig, ax = plt.subplots(nrows=2,**kwargs)
         col = self.statistics.columns[0]
         self.statistics[col].plot(ax=ax[0])
         timeseries = self.statistics[col]
@@ -236,12 +277,12 @@ class Metric():
             art = patches.Rectangle((year-window,- 25_000),window,400_000)
             patches_list.append(art)
 
-        pc = PatchCollection(patches_list,facecolor='green',alpha=0.15)
+        pc = PatchCollection(patches_list,facecolor='grey',alpha=0.15)
         ax[0].add_collection(pc)
-        ax[0].set_title('Criterion 1: rapid change')
+
 
         ### PLOT TIPPING POINTS
-        #replace the value -1 or 1 with the house price in that timestep
+        #replace the value -1 or 1 with the house price in that timestep 
         for index,value in self.candidates['rapid change_pos'].items():
             if not np.isnan(value):
                 self.candidates['rapid change_pos'].at[index] = timeseries.at[index] 
@@ -250,44 +291,77 @@ class Metric():
             if not np.isnan(value):
                 self.candidates['rapid change_neg'].at[index] = timeseries.at[index] 
 
-        ((self.candidates['rapid change_neg'].loc[2020:2200])).plot(style='v',ax=ax[0])
-        ((self.candidates['rapid change_pos'].loc[2020:2200])).plot(style='^',ax=ax[0])
+        ((self.candidates['rapid change_neg'].loc[2020:2200])).plot(style='v',ax=ax[0],markersize=15,markerfacecolor='red')
+        ((self.candidates['rapid change_pos'].loc[2020:2200])).plot(style='^',ax=ax[0],markersize=15,markerfacecolor='green')
+        
+        ax[0].set_title('Criterion 1: Rapid change')
+        #ax[0].set_xlabel('Time (years)')
+        ax[0].set_ylabel('House price (€)')
+        
+        
+        def add_patch(legend):
+            from matplotlib.patches import Patch
+            ax = legend.axes
 
+            handles, labels = ax.get_legend_handles_labels()
+            handles.append(Patch(facecolor='grey', edgecolor=None))
+            labels.append("Variance in window below threshold C2")
+
+            legend._legend_box = None
+            legend._init_legend_box(handles, labels)
+            legend._set_loc(legend._loc)
+            legend.set_title(legend.get_title().get_text())
+
+        lgd = ax[0].legend()
+        add_patch(lgd)
+        
+        #ax[0].legend()
+        
+        
         ### Plot states
         self.stable_states = find_states(self.candidates['stable'],window,2.0) #returns begin and end years of stable states
-        for i,state in enumerate(self.stable_states):
-            x_values = list(range(state[0],state[1]+1))
-            y_value = 2
-            ax[1].plot(x_values,[y_value]*len(x_values))
-            ax[1].text(sum(x_values)/len(x_values),y_value,str(i))
-        ax[1].set_title('Criterion 2: stable states')
+        #for i,state in enumerate(self.stable_states):
+        #    x_values = list(range(state[0],state[1]+1))
+        #    y_value = 2
+        #    ax[1].plot(x_values,[y_value]*len(x_values))
+        #    ax[1].text(sum(x_values)/len(x_values),y_value,str(i))
+        
 
 
 
         perfect_example_years = selected_SETPs
         
         ### PLOT PERFECT EXAMPLES
-        ax[1].scatter(perfect_example_years,[1]*len(perfect_example_years),s=150,color='black',label='Stable before and after the rapid change')
-        ax[1].scatter(only_after,[1]*len(only_after),s=150,color='red',marker=9,label='Only stable after the rapid change') #(CARETRIGHTBASE)
-        ax[1].scatter(only_before,[1]*len(only_before),s=150,color='blue',marker=8,label='Only stable before the rapid change') # (CARETLEFTBASE)
+        ax[1].scatter(perfect_example_years,[300_000]*len(perfect_example_years),s=150,color='black',label='Stable before and after the rapid change')
+        ax[1].scatter(unsubstantial,[300_000]*len(unsubstantial),s=150, marker='s',color='gold', label='No substantial difference between states')
+        ax[1].scatter(only_after,[200_000]*len(only_after),s=150,color='red',marker=9,label='Only stable after the rapid change') #(CARETRIGHTBASE)
+        ax[1].scatter(only_before,[200_000]*len(only_before),s=150,color='blue',marker=8,label='Only stable before the rapid change') # (CARETLEFTBASE)
 
-        ax[1].scatter(duplicates_years,[0]*len(duplicates_years),s=150,color='grey',label='Duplicates',marker="P")
-        ax[1].scatter(same_window,[0]*len(same_window),s=150,color='grey',label='Same state',marker="D")
-        ax[1].scatter(not_before_not_after,[0]*len(not_before_not_after),s=150,color='grey',label='Unstable before and after',marker="X")
-        ax[1].legend()
+        ax[1].scatter(duplicates_years,[100_000]*len(duplicates_years),s=150,color='grey',label='Duplicates',marker="P")
+        ax[1].scatter(same_window,[100_000]*len(same_window),s=150,color='grey',label='Same state',marker="D")
+        ax[1].scatter(not_before_not_after,[100_000]*len(not_before_not_after),s=150,color='grey',label='Unstable before and after',marker="X")
+        
 
 
         ### CRITERION 3: SUBSTANTIAL DIFFERENT STATES
         as_dict, as_df = mean_of_states(self.stable_states,timeseries)
 
         col = self.statistics.columns[0]
-        self.statistics[col].plot(ax=ax[2],style='--',color='grey',alpha=0.5)
+        self.statistics[col].plot(ax=ax[1],style='--',color='grey',alpha=0.5)
 
         for i,state in enumerate(self.stable_states):
             x_values = list(range(state[0],state[1]+1))
             y_value = as_dict[i]
-            ax[2].plot(x_values,[y_value]*len(x_values),lw=3)
-            ax[2].text(sum(x_values)/len(x_values),y_value,str(i))
+            if i == 0: #only for first item, prepare legend item
+                ax[1].plot(x_values,[y_value]*len(x_values),lw=3,label='Stable state')
+            else: 
+                ax[1].plot(x_values,[y_value]*len(x_values),lw=3)
+            ax[1].text(sum(x_values)/len(x_values),y_value,str(i))
+        
+        ax[1].legend()
+        ax[1].set_xlabel('Time (years)')
+        ax[1].set_ylabel('House price (€)')
+        ax[1].set_title('Criterion 2: Stable states, Criterion 3: Substantially different states')
             
         return fig,ax
 
@@ -300,12 +374,6 @@ class SETP():
         self.Type = None
         self.duptype = None
     
-    #def add_state(self,state_before,state_after):
-    #    self.before = state_before
-    #    self.after = state_after
-        
-    #def positive_or_negative(sign):
-    #    self.sign = sign
     
     def set_Type(self,Type):
         """
@@ -434,7 +502,7 @@ def find_states(sample,window,findvalue):
             end_period = index #always equate end of period to the last value
         else:
             if start_period is not None and start_period is not None:
-                states.append((start_period-window,end_period)) #append a new tuple to the states
+                states.append((start_period-window+1,end_period)) #append a new tuple to the states
                 #the above also correct for the width of the window
                 start_period = None #and create a new empty period
                 end_period = None
