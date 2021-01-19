@@ -152,7 +152,7 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
         for Area in Model.allResidentialArea: #kan naar hierboven! als method van measure
                RA.match_with_FloodProtection(Model.allFloodProtection)
     
-    experiment = Experiment(Model,SurgeLevel,Mayor)
+    experiment = Experiment(Model,SurgeLevel,Mayor,Implementation_time)
     
     if do_print:
         print("Finished experiment {}".format(experiment))

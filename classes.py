@@ -35,18 +35,20 @@ class Experiment():
     """An experiment object is a unique combination of (1) one model (a city), 
        (2) managed by a one mayor,
        (3) in one storm surge scenario
+       (4) with a certain implementation time setting (since 19/1/2021)
        containing all information of the objects AFTER running the model
        
        can OPTIONALLY: also have metrics
     """
     
-    def __init__(self,Model,SurgeLevel,Mayor,name=None):
+    def __init__(self,Model,SurgeLevel,Mayor,Implementation_time,name=None):
         self.Model = deepcopy(Model)
         self.SurgeLevel = deepcopy(SurgeLevel)
         self.Mayor = deepcopy(Mayor)
+        self.ImplementationTime = Implementation_time
         self.time = datetime.now() #moment at which the experiment was saved 
         if name is None: #If experiment is not provided with a name, make one!
-            self.name = "{}_{}_{}".format(Model.name,SurgeLevel.name,Mayor.get_name())
+            self.name = "{}_{}_{}_{}".format(Model.name,SurgeLevel.name,Mayor.get_name(),str(Implementation_time))
     
     def __repr__(self):
         return self.name + " " + self.time.strftime("%Y/%m/%d, %H:%M:%S")
@@ -160,7 +162,7 @@ def save_experiments(experiments,path=None):
     pickle.dump(experiments, open( os.path.join(path), "wb") ) 
     return print("File saved at: {}".format(path))
 
-def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All'):
+def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All',ITs=None):
     """Filter a list of experiments, based on the inputs values
     
     Arguments:
@@ -168,12 +170,17 @@ def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All'):
         *SLR_scenario* (str/list of strs) : Number referring to the SLR scenario
         *SurgeHeight* (int or string / list of ints/strings) : Number referring to the transient storm surge height scenario
         *Mayor* (str/list of strs) : Name of the mayor(s)
+
+        *ITs* (str/list of tuples) :  Tuple with implementation times passed e.g. (4, 6)
+            defaults to none to guarantee backward compatability
+
+        if you put any of the above to 'All', this variable will not be filtered
     
     Returns:
         *selection* (list of experiment objects) : The selected experiments
 
     Example syntax:
-    selection = sel_exp(experiments,SLR_scenarios='01',SurgeHeights='five_hundred_0',Mayors='H. Economicus')
+    selection = sel_exp(experiments,SLR_scenarios='01',SurgeHeights='five_hundred_0',Mayors='Lawkeeper',ITs=[(4,6),(11,16)])
     """
     selection = experiments
     
@@ -193,8 +200,14 @@ def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All'):
     if not Mayors == 'All':
         if not isinstance(Mayors,list):
             Mayors = [Mayors]
-        selection = [exp for exp in selection if exp.name.split('_')[-1] in Mayors]
-    
+        selection = [exp for exp in selection if exp.Mayor.get_name() in Mayors]
+
+    if ITs is not None:
+        if not ITs == 'All':
+            if not isinstance(ITs,list):
+                ITs = [ITs]
+        selection = [exp for exp in selection if exp.ImplementationTime in ITs]
+
     return selection
     
         

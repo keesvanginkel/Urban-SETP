@@ -17,7 +17,7 @@ from matplotlib import patches
 from matplotlib.collections import PatchCollection
 
 ################### LOAD THE EXPERIMENTS ###################
-input_path = "temp/experiments/experiment_selection_2020_11_4.p"
+input_path = "temp/experiments/experiment_selection_2021_1_19.p"
 assert Path(input_path).exists()
 experiments = pickle.load( open( input_path, "rb" ) )
 
