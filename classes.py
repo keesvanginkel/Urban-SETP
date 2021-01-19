@@ -171,6 +171,9 @@ def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All'):
     
     Returns:
         *selection* (list of experiment objects) : The selected experiments
+
+    Example syntax:
+    selection = sel_exp(experiments,SLR_scenarios='01',SurgeHeights='five_hundred_0',Mayors='H. Economicus')
     """
     selection = experiments
     

@@ -158,25 +158,34 @@ class Metric():
         #########################################################
         # CRITERION 3: CHECK FOR SUBSTANTIALLY DIFFERENT STATES #
         #########################################################     
-        
+
+        #This part of the algorithm was changed on 19 jan 2021. Initially, the difference between the states
+        #was derived by comparing the last house price in state A with the first house price in state B.
+        #In the updated version, the mean of both states are compared.
+
         for i, cand in enumerate(self.allSETPs_cands):
             if cand.Type == 'real': #only check for the ones that meet C1 and C2
-                end_state_before = self.stable_states[cand.before][1] #last year of previous state
-                #print('end_state_before',end_state_before)
-                last_house_price_stateA = self.statistics.loc[end_state_before].iloc[0]
-                #print('last_house_price_stateA',last_house_price_stateA)
-                start_state_after = self.stable_states[cand.after][0] #first year of next state
-                #print('start_state_after',start_state_after)
-                first_house_price_stateB = self.statistics.loc[start_state_after].iloc[0]
-                #print('first_house_price_stateB',first_house_price_stateB)
-                difference = last_house_price_stateA - first_house_price_stateB
-                perc_of_A = abs(100 * difference / last_house_price_stateA)
-                perc_of_B = abs(100 * difference / first_house_price_stateB)
-                #print('perc_of_A',perc_of_A)
-                #print('perc_of_B',perc_of_B)
-                
-                if (perc_of_A <= c3) or (perc_of_B <= c3): #difference is not substantial enough
-                    cand.Type = 'us' #unsubstantial difference between before and after
+
+                timeseries = self.statistics.iloc[:,0]
+                mean_of_states_dict, as_df = mean_of_states(self.stable_states, timeseries)
+
+                mean_state_before = mean_of_states_dict[cand.before]
+                mean_state_after = mean_of_states_dict[cand.after]
+                difference = mean_state_after - mean_state_before
+                perc_diff = 100 * abs(difference / mean_state_before)
+
+                if perc_diff <= c3: cand.Type = 'us' #indicate that there is an unsubstantial difference
+
+                #THIS IS THE OLD VERSION (BEFORE 19 JAN 2021)
+                #end_state_before = self.stable_states[cand.before][1] #last year of previous state
+                #last_house_price_stateA = self.statistics.loc[end_state_before].iloc[0]
+                #start_state_after = self.stable_states[cand.after][0] #first year of next state
+                #first_house_price_stateB = self.statistics.loc[start_state_after].iloc[0]
+                #difference = last_house_price_stateA - first_house_price_stateB
+                #perc_of_A = abs(100 * difference / last_house_price_stateA)
+                #perc_of_B = abs(100 * difference / first_house_price_stateB)
+                #if (perc_of_A <= c3) or (perc_of_B <= c3): #difference is not substantial enough
+                #    cand.Type = 'us' #unsubstantial difference between before and after
                     
 
         self.candidates = df #save some of the converted statistics as a df to make the plotting easier
@@ -543,3 +552,46 @@ def find_window_around_point(point,windows,window_size=4,margin=2,index=True):
                 if index: after = i
                 
     return before,after
+
+
+def add_suptitle(fig, exp, M):
+    """Add some information about the experiment as title to a figure created with M.plot_SETPs
+
+    Arguments:
+        fig (Matplotlib Figure) : Figure created with M.plot_SETPs
+        exp : experiment object from which to draw the metadata
+        metric : the metric from which to draw the metadata
+
+    Returns:
+        fig (Matplotlib Figure) : the input figure with a suptitle
+
+    """
+
+    # Make the data of the experiment more readable before sending it to the string
+    housing_market = M.name.split('_')[-1]
+    if housing_market == 'subj':
+        housing_market = 'Boundedly rational'
+    else:
+        housing_market = 'Rational'
+
+    area_name = M.name.split('_')[1]
+    if area_name == 'A':
+        area_name = 'A (Heijplaat, outer-dike)'
+    else:
+        area_name = 'B (City Centre, inner-dike)'
+
+    # Create the title string
+    suptitle_string = ( \
+        '''Sea level rise scenario: {} ||| Storm surge series: {} ||| Mayor: {}
+        {} housing market ||| Area {}'''.format(
+            exp.SurgeLevel.corresponding_SLR_Scenario.name.split('_')[-1],
+            exp.SurgeLevel.corresponding_SurgeHeight.name.split('_')[-1],
+            exp.Mayor.get_name(),
+            housing_market,
+            area_name))
+    fig.suptitle(suptitle_string)
+
+    file_string = exp.SurgeLevel.corresponding_SLR_Scenario.name.split('_')[-1] + '_' + \
+                  exp.SurgeLevel.corresponding_SurgeHeight.name.split('_')[-1] + '_' + \
+                  exp.Mayor.get_name() + '_' + M.name.split('_')[-1] + '_' + M.name.split('_')[1]
+    return fig, file_string
