@@ -23,7 +23,7 @@ allSurgeLevel = []
 
 def reset_scenarios():
     """
-    Start with empty lists that trakc the scenario objects
+    Start with empty lists that track the scenario objects
     """    
     allSLR_Scenario = []
     allSurgeHeight = []
@@ -196,6 +196,15 @@ def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All'):
     
         
 class Model():
+    """
+    A model represents one particular city, containing:
+     - a name (string)
+     - Residential Areas (list)
+     - Flood protection objects protecting these areas (list)
+     - Parameters to guide the model behaviour
+    
+    """
+    
     def __init__(self,name):
         self.name = name
         self.allFloodProtection = [] #List with all the flood protection objects relevant for the city
@@ -207,12 +216,6 @@ class Model():
     
     def add_ResidentialArea(self,ResidentialArea): #Add residential area to model
         self.allResidentialArea.append(ResidentialArea)
-        
-    #def add_Measure_FloodProtection(self,Measure_FloodProtection):
-    #    self.allMeasures.append(Measure_FloodProtection)
-        
-    #def add_Measure_ResidentialArea(self,Measure_ResidentialArea):
-    #    self.allMeasures.append(Measure_ResidentialArea)
         
     def add_Parameter(self,parameter_name,parameter_value): #Add parameter to the dict containing all parameters
         self.Parameters[parameter_name] = parameter_value

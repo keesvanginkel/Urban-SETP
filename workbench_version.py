@@ -1,5 +1,3 @@
-# Copied from Rotterdam.ipynb, version 21/8/2020, update 24/8
-
 from classes import *
 import copy
 from collections import OrderedDict
