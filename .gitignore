@@ -4,3 +4,5 @@ temp/
 __pycache__/
 __pycache
 Visualisations/
+__pycache__/classes.cpython-38.pyc
+__pycache__/workbench_version.cpython-38.pyc
