@@ -33,6 +33,8 @@ class Reactive(Mayor):
     def get_full_name(self):
         return('mr. Ree Active')
     
+    def paper_name(self):
+        return('Reactive')
     
     def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
         """
@@ -118,6 +120,9 @@ class Lawkeeper(Mayor):
     def get_full_name(self):
         return('Ms. A.L.L. Lawkeeper')
     
+    def paper_name(self):
+        return('Proactive')
+    
     def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
         """
         Arguments:
@@ -202,6 +207,9 @@ class Economicus(Mayor):
 
     def get_full_name(self):
         return('Mr. H. Economicus')
+    
+    def paper_name(self):
+        return('Economic')
     
     def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
         """
@@ -294,6 +302,9 @@ class Sentiment(Mayor):
 
     def get_full_name(self):
         return('Mr. Peter Sentiment')    
+    
+    def paper_name(self):
+        return('Sentiment')
     
     def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
         """
