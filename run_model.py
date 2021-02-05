@@ -1,6 +1,12 @@
 """
 This script defines the consequtive steps in one model experiment
+@author: Kees van Ginkel
+github.com/keesvanginkel
+
 """
+
+__author__ = '{Kees van Ginkel}'
+
 
 from classes import *
 

@@ -1,3 +1,13 @@
+"""
+This script contains all model classes and generic functions
+
+@author: Kees van Ginkel
+github.com/keesvanginkel
+
+"""
+
+__author__ = '{Kees van Ginkel}'
+
 import csv
 import matplotlib.pyplot as plt
 import numpy as np

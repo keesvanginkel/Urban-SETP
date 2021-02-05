@@ -1,3 +1,14 @@
+"""
+This script contains all classes and functions for exploring tipping points in the experiments.
+which can be explored
+
+@author: Kees van Ginkel
+github.com/keesvanginkel
+
+"""
+
+__author__ = '{Kees van Ginkel}'
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

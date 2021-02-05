@@ -1,3 +1,14 @@
+"""
+This script contains the different models, which can be cities of alternative representations of cities,
+which can be explored
+
+@author: Kees van Ginkel
+github.com/keesvanginkel
+
+"""
+
+__author__ = '{Kees van Ginkel}'
+
 from classes import *
 import os
 from collections import OrderedDict
