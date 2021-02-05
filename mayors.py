@@ -233,6 +233,89 @@ class Economicus(Mayor):
         small = Measures[0]
         large = Measures[1]
         
+        #STRATEGY FOR THE CITY CENTRE
+        CC = Model.allResidentialArea[1]
+        FP = Model.allFloodProtection[1] #the object to which to apply the heightening
+
+        if self.threshold_small <= CC.risk[i] < self.threshold_large: #If the flood risk in the City Centre exceeds X mln euro per year
+            newmeasure = copy.deepcopy(small) #make a copy of the measure to implement    
+            lst = [Measure for Measure in allactiveMeasure if Measure.apply_to.name == FP.name]
+            #list is either empty or has an active object
+            if len(lst) != 0: #if there is an active measure
+                Measure_inprogress = lst[0]
+                #IN THIS CASE WE DON'T NEED TO CHECK FURTHER! 
+                #BECAUSE THIS IS THE SMALLEST MEASURE, 
+                #AN EXISTING MEASURE WILL ALWAYS BE THE SAME OR LARGER THAN THE NEW IDEA!
+            else: #there are no active measures
+                newmeasure.plan_measure(FP,i)
+
+        elif CC.risk[i] >= self.threshold_large: #If the flood risk in the City Centre exceeds X mln euro per year
+            newmeasure = copy.deepcopy(large) #make a copy of the measure to implement
+            
+            lst = [Measure for Measure in allactiveMeasure if Measure.apply_to.name == FP.name]
+            #list is either empty or has an active object
+            if len(lst) != 0: #if there is an active measure
+                measure_inprogress = lst[0]
+                if newmeasure.heightening > measure_inprogress.heightening: #the new plan is larger than the old one
+                    #print('A special situation occurs. The old plan was: {}'.format(measure_inprogress))
+                    #print('The new plan is: {}'.format(newmeasure))
+                    
+                    #number of years they were already working on the old measure before they decided
+                    #that they should give up and work on the new measures
+                    already_working_on_it = measure_inprogress.lead_time - measure_inprogress.time_to_implementation
+                    bonus = int(round(already_working_on_it*measure_bonus_factor,0)) #how much faster can the new measure go?
+                    bonus = max(0,bonus) #bonus should never become smaller than 0 
+                    
+                    allactiveMeasure.remove(measure_inprogress) #remove the old measure from the active measure list
+                    
+                    #print('The bonus is: {}'.format(bonus))
+                    newmeasure.lead_time = newmeasure.lead_time - bonus #you can implement the new plan faster!
+                    #print('So the new planned measure is: {}'.format(newmeasure))
+                    newmeasure.plan_measure(FP,i)
+                    #print(allactiveMeasure)
+   
+            else: #there are no active measures
+                newmeasure.plan_measure(FP,i)
+
+class Economicus_HP_iter(Mayor):
+    """
+    Management strategy on the basis of a cost-benefit rationality
+    
+    In addition to the normal behaviour of economicus, this mayor will implement a measure on the Heijplaat.
+    
+    """
+    
+    def get_name(self):
+        return('H. Economicus_iter')
+
+    def get_full_name(self):
+        return('Mr. H. Economicus HP iterations')
+    
+    def paper_name(self):
+        return('Economic_iter')
+    
+    def apply_strategy(self,Model,SurgeLevel,Measures,i,time):
+        """
+        Arguments:
+            *Model* (Model object)
+            *SurgeLevel* (SurgeLevel object)
+            *Measures* (tuple of measures) = (small,large)
+                tuple items are of type 'Measure_FloodProtection'
+            *i* (int) : index of timestep
+            *time* (int) : year of timestep
+            
+        Effect of this method is that Measures will be implemented 
+        in the model object after some lead time
+        """
+        #We assume that from CBA follow these threshold (mln euro per year)
+        self.threshold_small = 5 #Underceedance threshold for implementing small upgrade return period (year)
+        self.threshold_large = 10 #Underceedance threshold for implementing large upgrade return period (year)
+        
+        
+        #DRAW MEASURES FROM THE LIST
+        small = Measures[0]
+        large = Measures[1]
+        
         
         #STRATEGY FOR THE HEIJPLAAT
         HP = Model.allResidentialArea[0] #Select the Heijplaat Residential Area object
@@ -285,8 +368,7 @@ class Economicus(Mayor):
                     #print(allactiveMeasure)
    
             else: #there are no active measures
-                newmeasure.plan_measure(FP,i)
-            
+                newmeasure.plan_measure(FP,i)            
         
         
 class Sentiment(Mayor):
