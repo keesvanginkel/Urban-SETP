@@ -19,6 +19,20 @@ from matplotlib.collections import PatchCollection
 class Metric():
     """
     Indicates which model outcome parameters should be considered model metrics
+    
+    Properties:
+    (upon initialization):
+        *self.name* (string) : name of the metric
+        *self.raw* (Pandas Series) : year as index, metric value as value
+        
+    (upon create_statistics):
+        *self._window* (int) : size of the rolling windows, not meant to be altered
+        *self.statistics* (Pandas DataFrame) : columns are statistics of the metric
+        
+    (upon find_SETP_candidates):
+        *self._margin* (int) : margin around window to search for stable states, not meant to be altered
+        *self.allSETPs_cands* (list) : list of SETP-objects in metric
+        *self.stable_states* (list) : all stable states in metric
     """
     
     def __init__(self,index,data,name=None):
@@ -30,24 +44,28 @@ class Metric():
         self.raw = series
         self.name = name
     
+    
     def __repr__(self):
         return "{}".format(self.name)
     
-    def create_statistics(self,window=5,lag=1,domain='All'):
+    def create_statistics(self,window,domain='All'):
         """
         Create statistics for Panda Series, used for tipping point analysis
-        Rolling window: result is set to the right edge of the window
+        This sets the size of the rolling window: result is set to the right edge of the window
         if Cut = true: don't show rows containing al NaNs
         
         Arguments:
-            *self.statistics* (Dataframe) : columns are series with an output metric of interest
-            *window* (int) : Width of the rolling window (in model timesteps)
-            *lag* : unused
+            *self.statistics* (Dataframe) : columns are statistics of the metric
+            *_window* (int) : Width of the rolling window (in model timesteps, e.g. 4 year)
+
             *domain* (tuple) : tuple indicating the beginning and end year to include in the statistic
             
         Returns:
-            *self.Statistics* (DataFrame) : 
+            *self.statistics* (DataFrame) : 
         """
+        #set window as unmutable property
+        self._window = window
+        
         #Construct empty df to store results
         series = self.raw
         df = pd.DataFrame(index=series.index,data=series)
@@ -55,13 +73,11 @@ class Metric():
         #Calculate derivates of raw time series
         df["{}".format("First order derivative (dM/dt)")] = series.to_frame().diff()
         df["{}".format("Second order derivative (d2M/dt2)")] = series.to_frame().diff().diff()
-            #df["{} __ {}".format(series.name,"Autocorrelation lag {}".format(lag))] = series.autocorr(lag=lag)
 
         #Calculate statistics using a rolling window
-        rolling = series.rolling(window=window)
+        rolling = series.rolling(window=self._window)
         df["{}".format("Window mean")] = rolling.mean()
         df["{}".format("Window variance")] = rolling.var()
-            #df["{} __ {}".format(series.name,"Window rolling correlation")] = rolling.apply(lambda x: x.autocorr(), raw=False)
 
         if not domain == 'All':
             df = df.loc[domain[0]:domain[1]]
@@ -80,7 +96,7 @@ class Metric():
         if save:
             fig.savefig(os.path.join(output_path,"{}_{}_statistics.png".format("exp_name",statistics.columns[0],dpi=150)))
     
-    def find_SETP_candidates(self,c1=0.15,c2=0.2e10,c3=10, window=4,margin=2):
+    def find_SETP_candidates(self,c1,c2,c3,margin):
         """
         Find the SETPs for a Metric timeseries, based on the statistics of this metric and tipping point
         criteria.
@@ -94,16 +110,24 @@ class Metric():
             *c1* (float) : absolute change of house price as fraction of house price at t0: detect rapid change
             *c2* (float) : absolute valued threshold for variance: detect stable states
             *c3* (float) : percentage of change between states: substantially different states
-            *window* (int) : window size for functionality using a moving window
-            *margin* (int) : margin around TP for assessing stable states
+            *margin* (int) : margin around TP for assessing stable states (in model timesteps e.g. 2 years)
+         
+        Uses
+            *self._window* (int) : window size for functionality using a moving window 
+                        ... set in create_statistics
 
         Effect of the function:
 
         adds attributes to the metric:
-            self.allSETP_cands (list of SETP-objects) : 
+            self.allSETPs_cands (list of SETP-objects) : 
             self.stable_states (list of stable states)
+            
+        Removed on 15/2: c1=0.15,c2=0.2e10,c3=10,margin=2
 
         """
+        #set margin as unmutable property
+        self._margin = margin
+        
         ind = self.statistics.index
         df = pd.DataFrame(index=ind) #save some in-between results in a df
 
@@ -135,11 +159,12 @@ class Metric():
         df["stable"] = pd.Series(index=ind,data=[2]*len(ind))[self.statistics["Window variance"] < c2]
 
         #The self.candidates originates from the select_candidates functions, TODO: this should be done by this function
-        self.stable_states = find_states(df['stable'],window,2.0) #returns begin and end years of stable states
+        self.stable_states = find_states(df['stable'],self._window,2.0) #returns begin and end years of stable states
 
         #Adds stable state before and after the SETP to the SETP object
         for cand in self.allSETPs_cands:
-            before, after = find_window_around_point(cand.year,self.stable_states,margin=margin,index=True)    
+            before, after = find_window_around_point(cand.year,self.stable_states,
+                                                     window_size=self._window,margin=self._margin,index=True)    
             #before and after are the indices of the states before and after; or None
             cand.before = before
             cand.after = after    
@@ -252,23 +277,31 @@ class Metric():
         self.candidates_as_lists = (self.selected_SETPs,duplicates_years,only_after,
                 only_before,same_window,not_before_not_after,unsubstantial)
         
-    def plot_SETPs(self,window,**kwargs):
+    def plot_SETPs(self,**kwargs):
         """
         Plot the results
         
         This should be run after select_SETPs
         
         Arguments:
-            *window* (int) : window size in years
             **kwargs** () : will be passed to plt.subplots()
+        
+        
+        
         
         Returns:
             fig,ax (matplotlib objects)
-            
-        Make sure the size of the window equals the size of the window in which the previous steps were done.
-        TODO: maybe we should add the window and margin size to the metric object?
         
         """
+        #Update (15/2/2021)
+        #*self._window* (int) :, is inferred from earlier definition window size in years; also _margin
+        if not hasattr(self, '_window'):
+            raise AttributeError('Window Metric._window is not defined, call Metric.create_statistics() first')
+        if not hasattr(self, '_margin'):
+            raise AttributeError('Margin Metric._margin is not defined, call Metric.find_SETP_candidates() first')
+        
+        window = self._window
+        margin = self._margin
         
         #get the output of the select_SETPs functions (this is not exactly the same as 
         #just the candidates, because we selected on sign)
@@ -426,13 +459,9 @@ class state():
     def __init__(self,i,start,end):
         self.i = i #identifier
         self.start = start #
-        self.end = end
-        
-    def calculate_mean(self,variable):
-        "Calculate the mean over the variable"
-        pass        
+        self.end = end       
 
-def average_before_after(data,year,window=5,margin=2):
+def average_before_after(data,year,window,margin):
     before = data.loc[year-margin-window:year-margin].mean()
     after = data.loc[year+margin:year+margin+window].mean()
     return(before,after)
@@ -528,7 +557,7 @@ def find_states(sample,window,findvalue):
                 end_period = None
     return states
 
-def find_window_around_point(point,windows,window_size=4,margin=2,index=True):
+def find_window_around_point(point,windows,window_size,margin,index=True):
     """
     Determine if there are stable windows around a certain point
     

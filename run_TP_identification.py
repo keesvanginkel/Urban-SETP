@@ -1,8 +1,5 @@
 ### Script to run and bugfix the TP identification algorithm outside the Notebooks
 
-#What do I want to replicate?
-
-
 from classes import *
 #in classes, also tipping will be imported!
 
@@ -37,8 +34,8 @@ c3 = 10 #percent
 
 experiment.create_Metrics()
 for M in experiment.allMetrics:
-    M.create_statistics() #Create summary statistics for the metric(t)
-    M.find_SETP_candidates(c1=c1,c2=c2,c3=c3, window=window,margin=margin)
+    M.create_statistics(window=window) #Create summary statistics for the metric(t)
+    M.find_SETP_candidates(c1=c1,c2=c2,c3=c3,margin=margin)
     M.select_SETPs(sign=-1,add_stable_before=True) #Also consider states which are only stable before as policy relevant
 
 for M in experiment.allMetrics:

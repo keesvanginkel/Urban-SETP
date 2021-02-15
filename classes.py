@@ -70,12 +70,13 @@ class Experiment():
         
         Arguments:
             *metrics* (list) : list items contain all output parameters which are considered model metrics
-        
+
         Returns:
             *df* (DataFrame) : Contains output metrics of interest, index=years
         """
         allMetrics = [] #List tracking all experiment metrics
-        for RA in self.Model.allResidentialArea: #BETTER, ITEMS TO LOOP OVER OUTSIDE THE METHOD!
+        for RA in self.Model.allResidentialArea: #Todo: place items to loop over outside this method. 
+            #this instantiates the metrics, here the window length should be defined (added 15/2/2021)
             allMetrics.append(tp.Metric(data=RA.house_price_t_objective,
                                      index=self.SurgeLevel.years,
                                      name="{}_house_price_obj".format(RA.name)
