@@ -208,9 +208,10 @@ class Metric():
                 mean_state_before = mean_of_states_dict[cand.before]
                 mean_state_after = mean_of_states_dict[cand.after]
                 difference = mean_state_after - mean_state_before
-                perc_diff = 100 * abs(difference / mean_state_before)
-
-                if perc_diff <= c3: cand.Type = 'us' #indicate that there is an unsubstantial difference
+                if not mean_state_before == 0:
+                    perc_diff = 100 * abs(difference / mean_state_before)
+                    if perc_diff <= c3: cand.Type = 'us' #indicate that there is an unsubstantial difference
+                else: cand.Type = 'zd' #indicate that there is zero-division
 
                 #THIS IS THE OLD VERSION (BEFORE 19 JAN 2021)
                 #end_state_before = self.stable_states[cand.before][1] #last year of previous state
@@ -557,16 +558,20 @@ def find_states(sample,window,findvalue):
                 end_period = None
     return states
 
-def find_window_around_point(point,windows,window_size,margin,index=True):
+
+def find_window_around_point(point, windows, window_size, margin, index=True):
     """
     Determine if there are stable windows around a certain point
-    
+    Todo: what also can be done, is not looking at a single point a certain distance, but iterating over [0:margin]
+    Todo: distances from the point and select any of the detected value. Would probably not make a differnce for the
+    Todo: current parameters settings, because margin < window_size.
+
     Arguments:
         *point* (int) : the year of interest
         *windows* (list of tuple): each list items is a state, described in tuple(start,end) of window
-        *window_size* (int) : indicate the length of your window
+        *window_size* (int) : indicate the length of your window (unused)
         *margin* (int) : the number of distances one should look around the point for a windows
-    
+
     Returns:
         if index = True:
         (before,after) : indices of the windows before and after, contains None if no window could be found
@@ -576,23 +581,22 @@ def find_window_around_point(point,windows,window_size,margin,index=True):
 
     before = None
     after = None
-    
-    #Look before the point
-    for i,window in enumerate(windows):
+
+    # Look before the point
+    for i, window in enumerate(windows):
         if point - margin >= window[0]:
             if point - margin <= window[1]:
                 before = window
                 if index: before = i
-    
-    #Look after the point
-    for i,window in enumerate(windows):
-        if point + margin + window_size >= window[0]:
-            if point + margin + window_size <= window[1]:
+
+    # Look after the point
+    for i, window in enumerate(windows):
+        if point + margin >= window[0]: # (15/2/2021 removed + window_size)
+            if point + margin <= window[1]: # (15/2/2021 removed + window_size)
                 after = window
                 if index: after = i
-                
-    return before,after
 
+    return before, after
 
 def add_suptitle(fig, exp, M):
     """Add some information about the experiment as title to a figure created with M.plot_SETPs
