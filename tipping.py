@@ -553,7 +553,9 @@ def find_states(sample,window,findvalue):
         else:
             if start_period is not None and start_period is not None:
                 states.append((start_period-window+1,end_period)) #append a new tuple to the states
-                #the above also correct for the width of the window
+                #the above also corrects for the width of the window; ...
+                #... the state stability value is assigned to the first year of the first window
+                #... that meets the stability criterion
                 start_period = None #and create a new empty period
                 end_period = None
     return states
@@ -568,15 +570,13 @@ def find_window_around_point(point, windows, window_size, margin, index=True):
 
     Arguments:
         *point* (int) : the year of interest
-        *windows* (list of tuple): each list items is a state, described in tuple(start,end) of window
-        *window_size* (int) : indicate the length of your window (unused)
-        *margin* (int) : the number of distances one should look around the point for a windows
+        *windows* (list of tuples): list of tuples with (begin, end) year of stable state
+        *window_size* (int) : indicate the length of thewindow (unused)
+        *margin* (int) : the number of distances one should look around the point for stable states
 
-    Returns:
-        if index = True:
-        (before,after) : indices of the windows before and after, contains None if no window could be found
-        if index = False:
-        return the windows themselves
+    Returns: a tuple containing the index positions of the state before and after the point, if any
+     e.g. (4,5) (state before is 4, state after is nr 5)
+     e.g. (None,6) (No state before, state after is nr 6)
     """
 
     before = None
