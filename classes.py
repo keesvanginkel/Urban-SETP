@@ -521,8 +521,6 @@ class FloodProtection:
         return self.name + str(self.protection_level)
 
 class ResidentialArea():
-    #trust_0 = 70 #initial trust of citizens, same for all residential areas
-    
     def __init__(self,name,elevation,surface_area,inhabitants,nr_houses,house_price_0,dam_pars,dam_pars_household,protected_by,description=None):
         self.name = name #Name of the object (string)
         self.elevation = elevation #Elevation of the Residential Area in m
@@ -537,10 +535,7 @@ class ResidentialArea():
         self.protected_by = protected_by #Names of the FloodProtection objects it is protected by
         self.description = description
     
-    def init_time(self,time,trust_0=70,risk_perception_0=0): #If the model is run over time, initialise lists to store the results for the variables of interest
-        self.trust_t = [float("NaN")] * len(time)
-        self.trust_t[0] = trust_0 #set initial condition
-        self.event_impact_history = [0] * len(time) #TO SAVE VALUES OF THE 'ALARMING CONDITIONS'
+    def init_time(self,time,risk_perception_0=0): #If the model is run over time, initialise lists to store the results for the variables of interest
         self.event_history = [""] * len(time) #NEW, BECAUSE THE REST WILL BE DISCARDED!
         self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
         self.nearmiss_history = [float("NaN")] * len(time) #SAVE THE DIFFERENCE BETWEEN THE DIKE HEIGHT AND PROTECTION LEVEL IN CASE OF NEAR MISS [0, 0.5]

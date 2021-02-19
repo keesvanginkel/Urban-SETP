@@ -115,15 +115,6 @@ Rotty.allResidentialArea[0].volume_constraint_threshold = 0.1 #m
 Rotty.allResidentialArea[1].volume_constraint_threshold = 1 #m
 
 #SET MODEL PARAMETERS
-Rotty.add_Parameter("alarming_conditions",
-       OrderedDict({ #water depth above flood protection level, Name of event, reduction of trust if this happens.
-                1   : ['Major flood',40], 
-                0   : ['Small flood',20],
-                -0.2   : ['Near miss',10],
-                -0.4  : ['Major wake-up',7],
-                -1  : ['Minor wake-up',5],
-                -10  : ['Nothing happens',0]}))
-
 Rotty.add_Parameter("Gumbel", #From Sterl et al. 2009
         OrderedDict({ #parameter for the Gumbel distribution
               "mu"   : 2.33,

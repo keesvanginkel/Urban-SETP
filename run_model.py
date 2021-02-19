@@ -10,10 +10,6 @@ __author__ = '{Kees van Ginkel}'
 
 from classes import *
 
-#global vars (depreciated)
-k = 0.2 
-T_eq = 70
-
 def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False):  
     """
     The algorithm describing all the steps in one model experiment
@@ -69,20 +65,7 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
                 RA.nearmiss_history[i] = RA.protection_level[i] - SurgeLevel.surgelevel[i]
                 
                 RA.event_history[i] = "!"
-            
-            #THEN EVALUATE THE IMPACT ON TRUST #DEPRECIATED, TO BE REPLACE WITH BAYESIAN STUFF
-            if i != 0: #don't evaluate trust in the first timestep!
-                #print(RA.protection_level-levels_t[i])
-                RA.event_impact_history[i] = evaluate_event(SurgeLevel.surgelevel[i]-RA.protection_level[i],
-                                                              Model.Parameters['alarming_conditions'],False)
-                #First evaluate the impact of this year's event (if any)
-                RA.trust_t[i] = RA.trust_t[i-1] - RA.event_impact_history[i]
 
-                #ALWAYS MODEL RECOVERY OF TRUST
-                dTdt = (RA.trust_t[i]-T_eq)*-k
-                RA.trust_t[i] = RA.trust_t[i] + dTdt
-
-        
         for RA in Model.allResidentialArea:
             
             #CALCULATE THE OBJECTIVE RISK IN THE NEIGHBOURHOOD AND HOUSEHOLD IN THIS TIMESTEP 
