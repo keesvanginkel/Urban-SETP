@@ -60,7 +60,7 @@ class Reactive(Mayor):
         CC = Model.allResidentialArea[1]
         FP = Model.allFloodProtection[1] #the object to which to apply the heightening
         
-        if CC.event_impact_history[i] == 10:
+        if CC.event_history[i] == "!": #Near miss event
             #print('Small measure triggered', str(time[i]))
             #print(small.name, small.lead_time)
             #check if there are already measures planned
@@ -76,7 +76,7 @@ class Reactive(Mayor):
             else: #there are no active measures
                 newmeasure.plan_measure(FP,i)
             
-        if CC.event_impact_history[i] > 10:
+        if CC.event_history[i] == "~": #Flood
             #print('Large measure triggered')
             #check if there are already measures planned
             newmeasure = copy.deepcopy(large) #make a copy of the measure to implement

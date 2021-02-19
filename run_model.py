@@ -63,7 +63,6 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
             #AND EVALUATE IF ANY NEAR MISS MIGHT HAVE OCCURED
             if 0 < RA.protection_level[i] - SurgeLevel.surgelevel[i] <= 0.5: #Near miss
                 RA.nearmiss_history[i] = RA.protection_level[i] - SurgeLevel.surgelevel[i]
-                
                 RA.event_history[i] = "!"
 
         for RA in Model.allResidentialArea:

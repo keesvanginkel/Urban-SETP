@@ -66,7 +66,7 @@ print("-"*40, end="\n")
 print("Importing model run algorithm.")
 from run_model import run_model01
 
-mayor_sel = Sentiment()
+mayor_sel = Reactive()
 print("Start running the model with strategy {}".format(mayor_sel.paper_name()))
 experiments = []
 for SurgeLevel in selection:

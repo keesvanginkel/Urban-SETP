@@ -24,21 +24,21 @@ from pdb import set_trace
 import tipping as tp
 
 #TRACK THE OBJECTS THAT WERE INITIATED
-#allSurgeSeries = []
-global allSLR_Scenario, allSurgeHeight, allSurgeLevel
+#global allSLR_Scenario, allSurgeHeight, allSurgeLevel
 
 allSLR_Scenario = []
 allSurgeHeight = []
 allSurgeLevel = []
 
-def reset_scenarios():
+def reset_scenarios(allSLR_Scenario,allSurgeHeight,allSurgeLevel):
     """
     Start with empty lists that track the scenario objects
     """    
     allSLR_Scenario = []
     allSurgeHeight = []
     allSurgeLevel = []
-    return print("allSLR_Scenario, allSurgeHeight, and allSurgeLevel emptied")
+    print("allSLR_Scenario, allSurgeHeight, and allSurgeLevel emptied")
+    return None
     
 
 class Experiment():
@@ -536,8 +536,8 @@ class ResidentialArea():
         self.description = description
     
     def init_time(self,time,risk_perception_0=0): #If the model is run over time, initialise lists to store the results for the variables of interest
-        self.event_history = [""] * len(time) #NEW, BECAUSE THE REST WILL BE DISCARDED!
-        self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS
+        self.event_history = [""] * len(time) #"": nothing happens, "~" flood, "!" : near miss
+        self.flood_history = [float("NaN")] * len(time) #SAVE THE INUNDATION DEPTHS [m]
         self.nearmiss_history = [float("NaN")] * len(time) #SAVE THE DIFFERENCE BETWEEN THE DIKE HEIGHT AND PROTECTION LEVEL IN CASE OF NEAR MISS [0, 0.5]
         self.flood_damage = [float("NaN")] * len(time) #SAVE THE FLOOD DAMAGE
         self.risk = [float("NaN")] * len(time) #to save the objective risk per RA
@@ -791,23 +791,23 @@ class Measure_ResidentialArea(Measure):
         super().__init__(name,lead_time)
         self.heightening = heightening
     
-def evaluate_event(water_level_difference,alarming_conditions,report):
-    """Returns a decrease in trust for a given difference between flood protection and observed storm surge level
-    Inputs:
-     *water_level_difference* (float) -- Flood protection level - storm surge level (so positive if flood occurs)
-     *alarming_conditions* (OrderedDict) -- Dict containing the possible event thresholds
-     *report* (boolean) -- Reports what the function is doing
-    
-    Return: a decrease in trust
-    """ 
-    for key, value in alarming_conditions.items():
-        #print (key, value)
-        if water_level_difference >= key:
-            if report:
-                print("This is a: {}, so trust goes down with {}".format(value[0],value[1]))
-            break
-    trust = value[1]
-    return trust
+# def evaluate_event(water_level_difference,alarming_conditions,report):
+#     """Returns a decrease in trust for a given difference between flood protection and observed storm surge level
+#     Inputs:
+#      *water_level_difference* (float) -- Flood protection level - storm surge level (so positive if flood occurs)
+#      *alarming_conditions* (OrderedDict) -- Dict containing the possible event thresholds
+#      *report* (boolean) -- Reports what the function is doing
+#
+#     Return: a decrease in trust
+#     """
+#     for key, value in alarming_conditions.items():
+#         #print (key, value)
+#         if water_level_difference >= key:
+#             if report:
+#                 print("This is a: {}, so trust goes down with {}".format(value[0],value[1]))
+#             break
+#     trust = value[1]
+#     return trust
 
 def Gumbel(x,mu,beta):
     "Returns the cumulative probability that X <= xp"
