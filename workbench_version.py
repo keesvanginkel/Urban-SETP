@@ -68,17 +68,17 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,d
     #######################################################
     
     window = 4 #The size of the rolling window
-    margin = 2 # The margin around the TP
+    margin = 3 # The margin around the TP
 
     #Criteria
     c1 = 0.15
-    c2 = 0.2e10 #variance
+    c2 = 1e9 #variance
     c3 = 10 #percent
     experiment.create_Metrics()
     
     for M in experiment.allMetrics:
-        M.create_statistics() #Create summary statistics for the metric(t)
-        M.find_SETP_candidates(c1=c1,c2=c2,c3=c3,window=window,margin=margin) #Evaluate the three tipping point criteria
+        M.create_statistics(window=window) #Create summary statistics for the metric(t)
+        M.find_SETP_candidates(c1=c1,c2=c2,c3=c3,margin=margin) #Evaluate the three tipping point criteria
         M.select_SETPs(sign=-1)
            
     
