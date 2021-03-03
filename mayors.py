@@ -226,8 +226,8 @@ class Economicus(Mayor):
         """
         #We assume that from CBA follow these threshold (mln euro per year)
         #15/2/2021, changed samll value from 5 to 2
-        #22/2 set to 3
-        self.threshold_small = 3 #Underexceedance threshold for implementing small upgrade (mln euro per year)
+        #22/2 set to 4
+        self.threshold_small = 4 #Underexceedance threshold for implementing small upgrade (mln euro per year)
         self.threshold_large = 10 #Underexceedance threshold for implementing large upgrade (mln euro per year)
         
         
@@ -313,7 +313,7 @@ class Economicus_HP_iter(Mayor):
         
         #15/2/2021, changed samll value from 5 to 2
         #22/2 set to 3
-        self.threshold_small = 3 #Underceedance threshold for implementing small upgrade return period (year)
+        self.threshold_small = 4 #Underceedance threshold for implementing small upgrade return period (year)
         self.threshold_large = 10 #Underceedance threshold for implementing large upgrade return period (year)
         
         
@@ -409,7 +409,8 @@ class Sentiment(Mayor):
         #We assume that from CBA follow these threshold (mln euro per year)
         
         #15/2/2021, changed samll value from 5 to 2
-        self.threshold_small = 2 #Underceedance threshold for implementing small upgrade return period (year)
+        #22/2 Set to 4
+        self.threshold_small = 4 #Underceedance threshold for implementing small upgrade return period (year)
         self.threshold_large = 10 #Underceedance threshold for implementing large upgrade return period (year)
         
         #DRAW MEASURES FROM THE LIST
