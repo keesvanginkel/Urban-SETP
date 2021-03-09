@@ -77,7 +77,7 @@ The code is mainly object-oriented, so it can be easily adapted for other cities
 
 [mayors.py](mayors.py) defines how and under what conditions mayors intervene in the system
 
-[run_model.py](run_model.py) describes the protocol for adapting the model in each timestep of an experiment
+[run_model.py](run_model.py) describes the running protocal for the model in each timestep of an experiment
 
 [001_runtest_Rotty.py](001_runtest_Rotty.py) is a simple model runtest without Jupyter Notebooks.
 
