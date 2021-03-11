@@ -10,7 +10,6 @@ __author__ = '{Kees van Ginkel}'
 
 import copy
 
-#Own modules
 from classes import *
 
 
@@ -18,7 +17,6 @@ from classes import *
 #still working on another (smaller) measure
 measure_bonus_factor = 0.5 #fraction of the years of the smaller measure, that implementing 
                            #the new measure will go faster
-
 
 class Reactive(Mayor):
     """
@@ -198,7 +196,7 @@ class Lawkeeper(Mayor):
 
 class Economicus(Mayor):
     """
-    Management strategy on the basis of a cost-benefit rationality
+    Management strategy on the basis of a objective risk thresholds (may result from cost-benefit analysis)
     
     """
     
@@ -281,7 +279,7 @@ class Economicus(Mayor):
 
 class Economicus_HP_iter(Mayor):
     """
-    Management strategy on the basis of a cost-benefit rationality
+    Management strategy on the basis of a objective risk thresholds (may result from cost-benefit analysis)
     
     In addition to the normal behaviour of economicus, this mayor will implement a measure on the Heijplaat.
     
@@ -378,7 +376,7 @@ class Economicus_HP_iter(Mayor):
         
 class Sentiment(Mayor):
     """
-    Management strategy on the basis of a cost-benefit rationality
+    Management strategy on the basis of perceived risk thresholds 
     
     """
     

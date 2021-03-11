@@ -14,21 +14,25 @@ import numpy as np
 import os
 import pandas as pd
 import pickle
-from abc import ABC, abstractmethod
-from math import log, exp
-from copy import deepcopy
-from datetime import datetime
 
-from pdb import set_trace
+from abc import ABC, abstractmethod
+from copy import deepcopy
+from math import log, exp
+from datetime import datetime
 
 import tipping as tp
 
-#TRACK THE OBJECTS THAT WERE INITIATED
-#global allSLR_Scenario, allSurgeHeight, allSurgeLevel
 
+################################ SOME GENERAL BOOKKEEPING #################################
+
+#TRACK THE OBJECTS THAT WERE INITIATED
 allSLR_Scenario = []
 allSurgeHeight = []
 allSurgeLevel = []
+allactiveMeasure = []
+
+#In a next version, add a generic class to track allSLR_Scenario, allSurgeHeight, allSurgeLevel
+#allactiveMeasure can be added to the experiment class?
 
 def reset_scenarios(allSLR_Scenario,allSurgeHeight,allSurgeLevel):
     """
@@ -41,6 +45,8 @@ def reset_scenarios(allSLR_Scenario,allSurgeHeight,allSurgeLevel):
     return None
     
 
+    
+################################ EXPERIMENT CLASS ########################################
 class Experiment():
     """An experiment object is a unique combination of (1) one model (a city), 
        (2) managed by a one mayor,
@@ -75,7 +81,7 @@ class Experiment():
             *df* (DataFrame) : Contains output metrics of interest, index=years
         """
         allMetrics = [] #List tracking all experiment metrics
-        for RA in self.Model.allResidentialArea: #Todo: place items to loop over outside this method. 
+        for RA in self.Model.allResidentialArea: #TODO: place items to loop over outside this method. 
             #this instantiates the metrics, here the window length should be defined (added 15/2/2021)
             allMetrics.append(tp.Metric(data=RA.house_price_t_objective,
                                      index=self.SurgeLevel.years,
@@ -107,8 +113,6 @@ class Experiment():
         df = pd.DataFrame(index=SurgeLevel.years)
         df['name'] = self.name
 
-        #for attr, value in Model.__dict__.items():
-        #    print(attr)
         SL_include = ['surgelevel']
         SL = SurgeLevel
         for attr, value in SL.__dict__.items():
@@ -129,7 +133,6 @@ class Experiment():
         for RA in Model.allResidentialArea:
             name = RA.name
             for attr, value in RA.__dict__.items():
-                #print(attr)
                 if str(attr) in RA_include:
                     df["{}_{}".format(name,attr)] = value
 
@@ -174,7 +177,8 @@ def save_experiments(experiments,path=None):
     return print("File saved at: {}".format(path))
 
 def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All',ITs=None):
-    """Filter a list of experiments, based on the inputs values
+    """
+    Filter a list of experiments, based on the inputs values
     
     Arguments:
         *experiments* (list of experiment objects) : The input experiments
@@ -220,23 +224,28 @@ def sel_exp(experiments,SLR_scenarios='All',SurgeHeights='All',Mayors='All',ITs=
         selection = [exp for exp in selection if exp.ImplementationTime in ITs]
 
     return selection
+
+
+
+################################ MODEL CLASS ########################################
+#Note that the models for individual cities are instantiated in models.py    
     
-        
 class Model():
     """
-    A model represents one particular city, containing:
-     - a name (string)
-     - Residential Areas (list)
-     - Flood protection objects protecting these areas (list)
-     - Parameters to guide the model behaviour
+    A model represents one particular city, attributes:
+
+     .name (string)             : Name of the city
+     .allResidentialArea (list) : List of ResidentialArea() objects
+     .allFloodProtection (list) : List of FloodProtection() objects
+     .Parameters (dict)         : Contains parameters needed in the run_model.py script
     
     """
     
     def __init__(self,name):
         self.name = name
-        self.allFloodProtection = [] #List with all the flood protection objects relevant for the city
-        self.allResidentialArea = [] #list with all the residential areas in the city
-        self.Parameters = {} #Dict containing all model parameters <TODO: Why should you do this with a dict; can be objects also!>
+        self.allFloodProtection = [] #List with all the flood protection objects relevant for the city (need to be connected with Residential Areas)
+        self.allResidentialArea = [] #list with all the residential areas in the city 
+        self.Parameters = {} #Dict containing all model parameters
         
     def add_FloodProtection(self,FloodProtection): #Add flood protection object to model
         self.allFloodProtection.append(FloodProtection)
@@ -244,7 +253,7 @@ class Model():
     def add_ResidentialArea(self,ResidentialArea): #Add residential area to model
         self.allResidentialArea.append(ResidentialArea)
         
-    def add_Parameter(self,parameter_name,parameter_value): #Add parameter to the dict containing all parameters
+    def add_Parameter(self,parameter_name,parameter_value): #Add parameter to the model
         self.Parameters[parameter_name] = parameter_value
     
     def __repr__(self):
@@ -259,9 +268,13 @@ class Model():
             self.name, 
             "".join(str(x.name) + "; " for x in self.allFloodProtection), 
             "".join(str(x.name) + "; " for x in self.allResidentialArea))
-        
-class Mayor(ABC): #is subclass of ABC (abstract base class)
-    @abstractmethod #in te vullen door subclasses (verplicht!)
+
+################################ MAYOR CLASS ########################################
+#Abstract Base Class: model behaviour should be defined in mayors.py   
+    
+    
+class Mayor(ABC): #Subclass of Abstract BaseClass
+    @abstractmethod
     def apply_strategy(self,Model,SurgeSeries,Measures,i,time):
         pass
     
@@ -269,16 +282,20 @@ class Mayor(ABC): #is subclass of ABC (abstract base class)
     def get_name(self):
         pass
     
-    def __str__(self): #this is what you see if you say "print(object)" #readable
+    def __str__(self): #this is what you see if you say "print(object)"
         return self.get_name()
 
+    
+    
+    
+################################ SEA LEVEL RISE SCENARIO ########################################
 
 class SLR_Scenario:
     """
-    A SLR_Scenario is a timeseries indicating the degree of
-    sea level rise for each timestep.
+    A SLR_Scenario is a timeseries indicating the sea level [m] per timestep [year]
     
-    #TODO: add that it remembers the RCP?
+    NOTE: SurgeLevel = SLR_Scenario + SurgeHeight
+    
     """
     def __init__(self,name,years=None,sealevel=None,description=None):
         allSLR_Scenario.append(self)
@@ -321,10 +338,7 @@ class SLR_Scenario:
             filename = self.name + ".pkl"
         
         with open(os.path.join(folder,filename),'wb') as f:
-            pickle.dump(self,f)
-        
-        
-        
+            pickle.dump(self,f)    
     
     def __repr__(self):
         return self.name +  "\n" + str(list(zip(self.years,self.sealevel)))
@@ -335,7 +349,7 @@ class SLR_Scenario:
 def SLR_Scenario_from_pickles(folder,empty=True):
     """
     Load all SLR_Scenario pickles from a certain folder,
-    while emptying any existing scenarios already added to the folder (optional)
+    while emptying any existing scenarios already added to the model (optional)
     """
     
     if empty:
@@ -345,11 +359,14 @@ def SLR_Scenario_from_pickles(folder,empty=True):
         if filename.endswith(".pkl"):
             with open(os.path.join(folder,filename),'rb') as f:
                 allSLR_Scenario.append(pickle.load(f))
-    return allSLR_Scenario #TODO HERE SOMETHING GOES WRONG WITH GLOBALS 
+    return allSLR_Scenario #TODO HERE SOMETHING GOES WRONG WITH GLOBALS, BETTER TO MAKE AN ABSTRACT CLASS FOR EACH RUN ENVIRONMENT
+    
+    
+################################ SURGE HEIGHT CLASS ########################################    
     
 class SurgeHeight:
     """
-    A SurgeHeight is a timeseries indicating the storm surge height
+    A SurgeHeight is a timeseries indicating the storm surge height [m] per timestep [year]
     irrespective of the sea level.
     
     This should be added to the sea level to get the storm surge level
@@ -357,7 +374,10 @@ class SurgeHeight:
     Should have the attributes:
         *self.name* (string) : name
         *self.years* (list of ints/floats) : the years eg. [2020,2021,...,2300]
-        *self.surgeheight* (list of floats) : the surge height per year [2.3, 4.1, ... , 1.8]
+        *self.surgeheight* (list of floats) : the surge height per year [2.3, 4.1, ... , 1.8] 
+        
+    
+    NOTE: SurgeLevel = SLR_Scenario + SurgeHeight
     
     """
     def __init__(self,name):
@@ -415,12 +435,15 @@ class SurgeHeight:
     
     def __str__(self):
         return self.name
+
+################################ SURGE HEIGHT CLASS ########################################      
     
 class SurgeLevel:
     """
-    A SurgeLevel is a timeseries indicating the storm surge level per year,
+    A SurgeLevel is a timeseries indicating the storm surge level [m] per timestep [year],
     which is the sum of sea level rise + surge height in that year.
     
+    NOTE: SurgeLevel = SLR_Scenario + SurgeHeight
     """ 
     def __init__(self,name=None):
         self.name = name
@@ -449,60 +472,59 @@ class SurgeLevel:
     def __str__(self): #this is what you see if you say "print(object)" meant to be simple
         return self.name
     
-    
 def combine_SurgeLevel(SLR_Scenario,SurgeHeight):
     name = SLR_Scenario.name + "__" + SurgeHeight.name
     instance = SurgeLevel(name=name) #Create new instance of object
     instance.from_combination(SLR_Scenario,SurgeHeight) #derive data from combining both sources
     return instance
 
-def generate_SurgeLevel_new(SLR,transient):
-    """
-    Generate a Sugelevel timeseries (=SLR + SurgeHeight)
-    
-    Arguments:
-        *SLR* (string) : 'Transient' sea level rise scenario e.g. '01'
-        *transient* (int) : Transient storm surge series
-    
-    Returns:
-        *SurgeLevel* (SurgeLevel object) : has time, surgelevel per time and some metadata
-    """
-    #load all SLR scenarios available as pickles
-    allSLR_Scenario = SLR_Scenario_from_pickles(os.path.join("SLR_projections","Transients"))
-    #and select the right one
-    SLR_obj = [x for x in allSLR_Scenario if x.name.split('__')[0].split('_')[1] == SLR][0]
 
-    #READ THE TRANSIENT SURGEHEIGHT SCENARIO
-    SH_folder = "SurgeHeight" ###TODO READ FROM CONFIG
-    SH_name = str(transient)
-    SH_path = os.path.join(SH_folder,SH_name+'.csv')
+
+#NOT SURE IF THIS IS STILL USED (11/3/2021)
+# def generate_SurgeLevel_new(SLR,transient):
+#     """
+#     Generate a Sugelevel timeseries (=SLR + SurgeHeight)
     
-    if not os.path.exists(SH_path):
-        print("SH path : {} does NOT EXIST".format(SH_path)) #throw an error!
-        return None
+#     Arguments:
+#         *SLR* (string) : 'Transient' sea level rise scenario e.g. '01'
+#         *transient* (int) : Transient storm surge series
     
-    SH_obj = SurgeHeight(SH_name)
-    SH_obj.from_csv(SH_path)
+#     Returns:
+#         *SurgeLevel* (SurgeLevel object) : has time, surgelevel per time and some metadata
+#     """
+#     #load all SLR scenarios available as pickles
+#     allSLR_Scenario = SLR_Scenario_from_pickles(os.path.join("SLR_projections","Transients"))
+#     #and select the right one
+#     SLR_obj = [x for x in allSLR_Scenario if x.name.split('__')[0].split('_')[1] == SLR][0]
+
+#     #READ THE TRANSIENT SURGEHEIGHT SCENARIO
+#     SH_folder = "SurgeHeight" 
+#     SH_name = str(transient)
+#     SH_path = os.path.join(SH_folder,SH_name+'.csv')
     
-    SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj)    
+#     if not os.path.exists(SH_path):
+#         print("SH path : {} does NOT EXIST".format(SH_path)) #throw an error!
+#         return None
     
-    return SurgeLevel
+#     SH_obj = SurgeHeight(SH_name)
+#     SH_obj.from_csv(SH_path)
     
+#     SurgeLevel = combine_SurgeLevel(SLR_obj,SH_obj)    
     
+#     return SurgeLevel
+    
+################################ FLOOD PROTECTION OBJECTS ########################################       
 
 class FloodProtection:
     """
     Initiate FloodProtection class, which are flood protection infrastructures which...
      - Protect a certain area
      - Against flood with a certain water level (in the baseline situation)
-     - Moveable barrier?
     """
     
-    def __init__(self,name,baseline_level,moveable,description=None):
+    def __init__(self,name,baseline_level,description=None):
         self.name = name #Name of the flood protection object (string)
         self.baseline_level = baseline_level #initial level of flood protection
-        self.protection_level = baseline_level #is something that changes of time
-        self.barrier = moveable
         self.description = description
         self.activeMeasure = [] #initially, there are no active measures for the FP object
         
@@ -520,6 +542,10 @@ class FloodProtection:
     def __str__(self): #this is what you see if you say "print(object)"
         return self.name + str(self.protection_level)
 
+
+################################ RESIDENTIAL AREA OBJECTS ########################################       
+    
+    
 class ResidentialArea():
     def __init__(self,name,elevation,surface_area,inhabitants,nr_houses,house_price_0,dam_pars,dam_pars_household,protected_by,description=None):
         self.name = name #Name of the object (string)
@@ -569,20 +595,23 @@ class ResidentialArea():
   
     def calculate_damage(self,inundation,timestep=0):
         """
-        Calculate flood damage for a residential area
+        Calculate flood damage for a residential area (see below for damage to household)
 
         Input:
-            *self.dam_pars* (tuple) : (MaxDamage_Residential,depth,dam_frac) describing damage functions
-                                  euro/m2            m      (-)
             *inundation* (float) : Inundation depth in m
-            *surface_area* (float) : Surface area of the region in km2
-            *timestep* (int) : (optionally) model timestep to check if flood proofing was implemented
-
-        Returns:
-            *damage* (float) : damage to the area in 2010-Euros
+            *timestep* (int) : (optionally) model timestep to check if flood proofing (not the dike!) was implemented
             
-            #TODO: OPLETTEN, JE ROEPT DEZE FUNCTIE OOK NOG EEN KEER AAN BIJ DE RISICO-BEREKENING!!
-            #TODO: UPDATE THE DOCSTRING, USES ATTRIBUTE FROM .SELF RATHER THAN INPUT 
+        Uses:
+            *self.dam_pars* (tuple) : (MaxDamage_Residential,depth,dam_frac) describing damage functions
+                                  euro/m2            m      (-)      
+            *self.surface_area* (float) : Surface area of the region in km2
+            
+        Returns:
+            *.damage* (float) : damage to the area in 2010-Euros
+            
+        NOTE THAT THIS FUNCTION IS NOT ONLY USED FOR CALCULATING DAMAGE DURING AN EVENT, BUT ALSO TO DO A RISK ESTIMATE USING SYNTHETIC EVENTS
+        
+        #TODO: RENAME THIS FUNCTION TO CALCULATE_DAMAGE_RA() TO AVOID CONFUSION OF DAMAGE CALCULATION PER HOUSEHOLD
         """
               
         dam_fraction = np.interp(inundation,self.dam_pars[1],self.dam_pars[2]) #fraction of max damage
@@ -610,7 +639,7 @@ class ResidentialArea():
         Returns:
             *damage* (float) : damage to a household in 2010-Euros
             
-            #TODO: OPLETTEN, JE ROEPT DEZE FUNCTIE OOK NOG EEN KEER AAN BIJ DE RISICO-BEREKENING!!!
+        NOTE THAT THIS FUNCTION IS NOT ONLY USED FOR CALCULATING DAMAGE DURING AN EVENT, BUT ALSO TO DO A RISK ESTIMATE USING SYNTHETIC EVENTS
         """
         dam_fraction = np.interp(inundation,self.dam_pars_household[1],self.dam_pars_household[2]) #fraction of max damage
         max_damage = self.dam_pars_household[0]
@@ -637,24 +666,21 @@ class ResidentialArea():
             *I_exp_max* (float) : Water depth at which the maximum experience occurs [currently unused but hardcoded]
             *I_social* (float) : Impact of neighbouring residential areas through media
             
-        Returns:
+        Uses: 
+            *self.Bayesian_pars*
+            
+        Effect:
             *self.risk_perception(time)* (float) : The risk perception in the current timestep
         """        
         
         depth = self.flood_history[time]  #water depth
         nearmiss = self.nearmiss_history[time]
         
-        #set_trace()
-        
         if depth > 0: #IN CASE OF A FLOOD
             #print('timestep: {}, region: {}, FLOOD!'.format(time,self.name))
             a = self.Bayesian_pars.a[2] 
             b = self.Bayesian_pars.b[2] 
             c = self.Bayesian_pars.c[2] 
-            #unpack values to enable the linear interpolation
-            #TODO: CHANGE THE I_exp_interp(...)
-            #xp = I_exp_interp['xp'] 
-            #fp = I_exp_interp['fp']
             #linear interpolation of I_exp
             I_exp = np.interp(depth,[0,0.5],[0,1],left=0,right=1)
             
@@ -670,8 +696,7 @@ class ResidentialArea():
                 a = self.Bayesian_pars.a[0] #Select the first weighting factor ...
                 b = self.Bayesian_pars.b[0] #... from the list of weighting factors ...
                 c = self.Bayesian_pars.c[0] #... (see docstring of Bayesian_pars class)
-                I_exp = 0 #does not impact the calculation, but needs to be defined #TODO NO HARDCODING      
-        #set_trace()   
+                I_exp = 0 #does not impact the calculation, but needs to be defined      
         #Function should not be applied in the first timestep t=0, use initial condition instead in this timestep
         self.risk_perception[time] = (
         a * self.risk_perception[time-1] + b * I_exp + c * I_social) / (
@@ -680,7 +705,7 @@ class ResidentialArea():
     def __repr__(self): #this is wat you see if you say "object" (without printing)
         return self.name + " Elevation: " + str(self.elevation) + "\n Protected by: " + str(self.protected_by)
         
-    def __str__(self): #this is what you see if you say "print(object)" #readable
+    def __str__(self): #this is what you see if you say "print(object)"
         return self.__dict__
 
 def discount_risk(EAD,discount=0.03,horizon=80):
@@ -735,7 +760,7 @@ class Bayesian_pars():
         self.b = b
         self.c = c
     
-allactiveMeasure = []
+################################ MEASURE CLASS (CAN BE TAKEN BY MAYORS) ########################################  
 
 def allactiveMeasure_reset():
     allactiveMeasure = []
@@ -743,8 +768,7 @@ def allactiveMeasure_reset():
 class Measure():
     def __init__(self,name,lead_time):
         self.name = name
-        self.lead_time = lead_time #time it takes to implement the measure
-        
+        self.lead_time = lead_time #time it takes to implement the measure     
 
     def plan_measure(self,apply_to,i):
         """ self.time_to_implementation is a counter, 
@@ -753,7 +777,6 @@ class Measure():
         self.apply_to = apply_to #flood protection object to which measure should be applied
         self.time_to_implementation = self.lead_time
         allactiveMeasure.append(self)
-        #### houd ergens bij in de historie dat je deze measure gepland hebt.
         apply_to.measure_history[i] = self.heightening #can be made nicer
         
     def countdown(self,i,end):#counts down, and if counter = 0 implements the measure
@@ -780,34 +803,16 @@ class Measure_FloodProtection(Measure):
         self.heightening = heightening
     
     def implement_measure(self,i,end):
-        #print(self.apply_to.protection_level)
-        #print(self.heightening)
         self.apply_to.protection_level[i:end] = [self.apply_to.protection_level[i] + self.heightening] * (end-i)
-        #print(self.apply_to.protection_level)
         allactiveMeasure.remove(self) #remove the measure from the active measure list
         
 class Measure_ResidentialArea(Measure):
     def __init__(self,name,lead_time,heightening):
         super().__init__(name,lead_time)
         self.heightening = heightening
-    
-# def evaluate_event(water_level_difference,alarming_conditions,report):
-#     """Returns a decrease in trust for a given difference between flood protection and observed storm surge level
-#     Inputs:
-#      *water_level_difference* (float) -- Flood protection level - storm surge level (so positive if flood occurs)
-#      *alarming_conditions* (OrderedDict) -- Dict containing the possible event thresholds
-#      *report* (boolean) -- Reports what the function is doing
-#
-#     Return: a decrease in trust
-#     """
-#     for key, value in alarming_conditions.items():
-#         #print (key, value)
-#         if water_level_difference >= key:
-#             if report:
-#                 print("This is a: {}, so trust goes down with {}".format(value[0],value[1]))
-#             break
-#     trust = value[1]
-#     return trust
+        
+################################ SOME OTHER HELPER FUNCTIONS ########################################          
+        
 
 def Gumbel(x,mu,beta):
     "Returns the cumulative probability that X <= xp"
@@ -873,8 +878,6 @@ def shift_subjective_floods(return_periods,risk_perception_factor):
     return RPs_shifted
         
         
-    
-    
 
 #Taken from the OSdaMage model (vs 1.0) [Van Ginkel et al. 2020]
 def risk_FP(dam,RPs,PL):

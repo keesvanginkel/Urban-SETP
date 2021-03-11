@@ -38,8 +38,8 @@ class Metric():
     def __init__(self,index,data,name=None):
         """The raw indicator data, describes the development of the metric over time"""
         series = pd.Series(name=name,data=data,index=index)
-        df = series.to_frame() #function below only works for dfs #TODO: is possibly also possible with series
-        df[df<0] = 0 #Dirty work-around: avoid values below zero TODO.
+        df = series.to_frame() #function below only works for dfs
+        df[df<0] = 0 #Work-around: avoid values below zero 
         series = df.squeeze()
         self.raw = series
         self.name = name

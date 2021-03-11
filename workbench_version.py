@@ -3,15 +3,12 @@ import copy
 from collections import OrderedDict
 import csv
 from datetime import datetime
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import numpy as np
 import os
 from pathlib import Path
-#import ipywidgets as widgets
 import pickle
-
-from pdb import set_trace
 
 def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,do_print=False):  
     
@@ -25,7 +22,6 @@ def run_model_workbench(SLR,transient,Mayor,Housing_market,implementation_time,d
     #load all SLR scenarios available as pickles
     allSLR_Scenario = SLR_Scenario_from_pickles(Path("SLR_projections","Transients"))
     #and select the right one
-    #TODO: pathlib
     SLR_obj = [x for x in allSLR_Scenario if x.name.split('__')[0].split('_')[1] == SLR][0]
     
     #Import SurgeHeight

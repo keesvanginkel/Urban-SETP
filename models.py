@@ -76,7 +76,7 @@ Rotty.add_ResidentialArea(ResidentialArea(
     inhabitants = 1500,
     nr_houses = 750,
     house_price_0 = 300e3, # euro, pricelevel of t=0
-    dam_pars = dam_pars, #TODO: dit is een beetje omslachtig, beter gewoon in 1 dict meegeven 
+    dam_pars = dam_pars, #TODO: IN A NEXT VERSION, ADD AS PARAMETER
     dam_pars_household = dam_pars_household,
     protected_by = ["No"],
     description = "Residential area A: the Heijplaat"))
@@ -93,8 +93,8 @@ Rotty.add_ResidentialArea(ResidentialArea(
     description="Residential area B: City Centre"))
 
 #Add flood protection objections to the model
-Rotty.add_FloodProtection(FloodProtection("No",3.5,False,"Region without flood protection"))
-Rotty.add_FloodProtection(FloodProtection("Dike",4.5,False,"Sea dike"))
+Rotty.add_FloodProtection(FloodProtection("No",3.5,"Region without flood protection"))
+Rotty.add_FloodProtection(FloodProtection("Dike",4.5,"Sea dike"))
 
 #SET BAYESIAN WEIGHTING FACTORS
 Rotty.allResidentialArea[0].Bayesian_pars = Bayesian_pars( #Heijplaat

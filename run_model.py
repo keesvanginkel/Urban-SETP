@@ -1,5 +1,5 @@
 """
-This script defines the consequtive steps in one model experiment
+This script defines the consequetive steps in one model experiment
 @author: Kees van Ginkel
 github.com/keesvanginkel
 
@@ -103,7 +103,7 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
                 RA.risk_household_discounted[i] = discount_risk(future_EADs,RA.r,RA.house_price_horizon)
                 flood_discount = RA.risk_household_discounted[i] - RA.risk_household_discounted[0] # The increase in discounted risk
                 #Calculate new house price
-                RA.house_price_t_objective[i] = RA.house_price_0 - flood_discount #misschien niet helemala hetzelfde als Wouter heeft gedaan?
+                RA.house_price_t_objective[i] = RA.house_price_0 - flood_discount 
             
             #CALCULATE THE RISK PERCEPTION
             if i != 0: #skip in the first timestep (here the initial condition is used)
@@ -121,14 +121,13 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
                                                      shift_subjective_floods(RPs.copy(),RA.risk_perception[i]), #perceived return periods
                                                      shift_subjective_floods(RA.protection_level_rp[i],RA.risk_perception[i])) #EAD [per household] in 2010-euros
             
-            #TODO: ADD ANTICIPATE ON FUTURE SEA LEVEL RISE
             #Risk discounting: for now assume that households don't anticipate any sea level rise
             if time_remaining > RA.house_price_horizon:
                 future_EADs_perceived = [RA.risk_household_perceived[i]] * RA.house_price_horizon #assume that all future damages equal current EAD
                 RA.risk_household_discounted_perceived[i] = discount_risk(future_EADs_perceived,RA.r,RA.house_price_horizon)
                 flood_discount_subjective = RA.risk_household_discounted_perceived[i] - RA.risk_household_discounted[0] # The increase in discounted risk
                 #Calculate new house price
-                RA.house_price_t_subjective[i] = RA.house_price_0 - flood_discount_subjective #misschien niet helemala hetzelfde als Wouter heeft gedaan?
+                RA.house_price_t_subjective[i] = RA.house_price_0 - flood_discount_subjective 
             
             
             
@@ -137,7 +136,7 @@ def run_model01(Model,SurgeLevel,Mayor,Implementation_time=(7,10),do_print=False
         for measure in allactiveMeasure: #tell all measures that are currently planned that a timestep has passed and that their implementation is coming near 
             measure.countdown(i,len(time)) #we need to tell the measure instances which timestep it is
         
-        for Area in Model.allResidentialArea: #kan naar hierboven! als method van measure
+        for Area in Model.allResidentialArea: #CAN POSSIBLY ALSO BE IMPLEMENTED AS METHOD OF MEASURE
                RA.match_with_FloodProtection(Model.allFloodProtection)
     
     experiment = Experiment(Model,SurgeLevel,Mayor,Implementation_time)
