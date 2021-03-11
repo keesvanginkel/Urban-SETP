@@ -29,7 +29,7 @@ Here, we take you through the basic model set-up..
 The [Rotty model](models.py) describes a coastal city, threatened by storm surges from the sea which are aggravated by sea level rise. Residential area A is an outer-dike area with an elevation well above sea level. Residential area B is located in a polder below sea level, but is protected by a dike. 
 
 
-<img src="Drawings/Rotty2.dio.png" width="750" alt="Stylized overview of the case study">
+<img src="Drawings/Rotty.dio.png" width="750" alt="Stylized overview of the case study">
 
 Each [model run](run_model.py) simulates the development of the flood risk over time for the residential areas of the city, for a variety of sea level rise and storm surge scenarios.  Four different [management strategies (mayors)](mayors.py) can be chosen to adapt components of the city or the flood protection over time. Each mayor reflects an archetypical, different approach to flood risk management.
 The model runs on a yearly timestep, from 2020 to 2300. In each timestep t, [the following steps are taken](run_model.py):
